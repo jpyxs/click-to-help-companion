@@ -14,6 +14,10 @@ Arab.org runs a campaign where one click per day triggers a real donation to Pal
 - **Auto-click mode** - Set it and forget it with a random time within your chosen window
 - **Reminder notifications** - If you haven't clicked by evening, you get a nudge
 
+## Interface
+
+![Click to Help Companion popup](popup-preview.png)
+
 ## Project structure
 
 ```
