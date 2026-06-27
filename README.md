@@ -11,9 +11,8 @@ Arab.org runs a campaign where one click per day triggers a real donation to Pal
 - **One-click from the toolbar** - Opens the campaign page and performs the click for you
 - **Daily streak tracker** - Visual ring counter that shows how many consecutive days you have clicked
 - **Stats dashboard** - Total lifetime clicks, today's status, and your best streak on record
-- **Auto-click mode** - Set it and forget it. The extension opens the page in a background tab and clicks for you at 10 AM daily
-- **Reminder notifications** - If you haven't clicked by 6 PM, you get a nudge
-- **Sound toggle** - Optional audio feedback when a click registers
+- **Auto-click mode** - Set it and forget it with a random time within your chosen window
+- **Reminder notifications** - If you haven't clicked by evening, you get a nudge
 
 ## Project structure
 
@@ -43,7 +42,9 @@ If the icon does not show up, click the puzzle piece icon in the toolbar and pin
 
 ## How the auto-click works
 
-When you enable "Auto-Click Daily" in the settings panel, the background service worker creates a Chrome alarm that fires at 10 AM local time every day. When the alarm triggers, the extension:
+When you enable "Auto-Click Daily" in the settings panel, you can choose a time window. The background service worker picks a random minute within that window and schedules a Chrome alarm. This randomized timing mimics human behavior so the click does not appear as a bot-like fixed schedule.
+
+When the alarm triggers, the extension:
 
 1. Checks if you already clicked today (skips if you did)
 2. Opens the arab.org campaign page in a background tab

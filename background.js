@@ -14,8 +14,8 @@ const STORAGE_KEYS = {
   TODAY_CLICKS: "todayClicks",
   TODAY_DATE: "todayDate",
   AUTO_CLICK: "autoClick",
-  NOTIFICATIONS: "notifications",
-  SOUND: "sound"
+  TIME_RANGE: "timeRange",
+  NOTIFICATIONS: "notifications"
 };
 
 /* --- Lifecycle Events --- */
@@ -30,8 +30,8 @@ chrome.runtime.onInstalled.addListener((details) => {
       [STORAGE_KEYS.TODAY_CLICKS]: 0,
       [STORAGE_KEYS.TODAY_DATE]: "",
       [STORAGE_KEYS.AUTO_CLICK]: false,
-      [STORAGE_KEYS.NOTIFICATIONS]: true,
-      [STORAGE_KEYS.SOUND]: false
+      [STORAGE_KEYS.TIME_RANGE]: "morning",
+      [STORAGE_KEYS.NOTIFICATIONS]: true
     });
   }
 
@@ -46,10 +46,10 @@ chrome.runtime.onStartup.addListener(() => {
 
 function setupAlarms() {
   chrome.storage.local.get(
-    [STORAGE_KEYS.AUTO_CLICK, STORAGE_KEYS.NOTIFICATIONS],
+    [STORAGE_KEYS.AUTO_CLICK, STORAGE_KEYS.TIME_RANGE, STORAGE_KEYS.NOTIFICATIONS],
     (data) => {
       if (data[STORAGE_KEYS.AUTO_CLICK]) {
-        scheduleAlarm(ALARM_AUTO_CLICK, AUTO_CLICK_HOUR);
+        scheduleAutoClickAlarm(data[STORAGE_KEYS.TIME_RANGE] || "morning");
       } else {
         chrome.alarms.clear(ALARM_AUTO_CLICK);
       }
@@ -61,6 +61,38 @@ function setupAlarms() {
       }
     }
   );
+}
+
+function scheduleAutoClickAlarm(timeRange) {
+  const now = new Date();
+  const target = new Date();
+
+  let minHour, maxHour;
+  switch (timeRange) {
+    case "morning": minHour = 8; maxHour = 11; break;
+    case "midday": minHour = 10; maxHour = 14; break;
+    case "afternoon": minHour = 13; maxHour = 17; break;
+    case "evening": minHour = 17; maxHour = 21; break;
+    case "night": minHour = 20; maxHour = 23; break;
+    default: minHour = 8; maxHour = 11;
+  }
+
+  target.setHours(randomInt(minHour, maxHour), randomInt(0, 59), 0, 0);
+
+  if (target <= now) {
+    target.setDate(target.getDate() + 1);
+  }
+
+  const delayMinutes = (target.getTime() - now.getTime()) / (1000 * 60);
+
+  chrome.alarms.create(ALARM_AUTO_CLICK, {
+    delayInMinutes: delayMinutes,
+    periodInMinutes: 24 * 60
+  });
+}
+
+function randomInt(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
 function scheduleAlarm(name, targetHour) {

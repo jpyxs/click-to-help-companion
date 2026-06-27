@@ -55,10 +55,8 @@ body {
   flex-direction: column;
   width: 100%;
   height: 100%;
-  border-radius: var(--radius-lg);
   overflow: hidden;
   background: var(--color-bg);
-  border: 1px solid var(--color-border);
 }
 
 /* --- Scrollbar --- */
@@ -170,7 +168,7 @@ body {
 /* --- Hero Section --- */
 
 .hero {
-  padding: var(--gutter) var(--gutter) 12px;
+  padding: 14px var(--gutter) 10px;
   background: var(--color-white);
 }
 
@@ -183,8 +181,8 @@ body {
 
 .streak-ring {
   position: relative;
-  width: 104px;
-  height: 104px;
+  width: 96px;
+  height: 96px;
 }
 
 .streak-svg {
@@ -251,14 +249,14 @@ body {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 8px;
-  padding: 10px var(--gutter);
+  padding: 8px var(--gutter);
 }
 
 .stat-card {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 10px 6px;
+  padding: 8px 6px;
   background: var(--color-white);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
@@ -331,7 +329,7 @@ body {
 /* --- Settings Panel --- */
 
 .settings {
-  padding: 14px var(--gutter) 6px;
+  padding: 12px var(--gutter) 4px;
 }
 
 .settings-title {
@@ -348,7 +346,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 0;
+  padding: 7px 0;
   border-bottom: 1px solid var(--color-border);
 }
 
@@ -373,6 +371,50 @@ body {
   font-family: var(--font-body);
   font-size: 10px;
   color: var(--color-text-muted);
+}
+
+/* --- Time Range Selector --- */
+
+.time-range-container {
+  display: none;
+  padding: 8px 0 6px;
+  animation: fadeIn 200ms ease;
+}
+
+.time-range-container.visible {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.time-range-label {
+  font-family: var(--font-body);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.time-range-select {
+  font-family: var(--font-body);
+  font-size: 11px;
+  padding: 5px 28px 5px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-white) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath fill='%236B6B6B' d='M2 4l3 3 3-3z'/%3E%3C/svg%3E") no-repeat right 8px center;
+  background-size: 12px;
+  color: var(--color-text);
+  cursor: pointer;
+  appearance: none;
+  outline: none;
+}
+
+.time-range-select:focus {
+  border-color: var(--color-primary);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 /* --- Toggle Switch --- */
@@ -430,7 +472,7 @@ body {
 /* --- Action Button --- */
 
 .action-section {
-  padding: 10px var(--gutter) var(--gutter);
+  padding: 10px var(--gutter) 20px;
 }
 
 .btn-click {
@@ -470,21 +512,6 @@ body {
   padding: 0 var(--gutter) 12px;
 }
 
-.footer-flag-stripe {
-  width: 100%;
-  height: 2px;
-  border-radius: 1px;
-  overflow: hidden;
-  margin-bottom: 10px;
-  background: linear-gradient(
-    to right,
-    var(--flag-black) 0% 25%,
-    var(--flag-white) 25% 50%,
-    var(--flag-green) 50% 75%,
-    var(--flag-red) 75% 100%
-  );
-}
-
 /* --- Footer Links --- */
 
 .footer-links {
@@ -520,10 +547,29 @@ body {
 
 .footer-bottom {
   display: flex;
+  flex-direction: column;
+  padding-top: 8px;
+}
+
+.footer-flag-stripe {
+  width: 100%;
+  height: 2px;
+  border-radius: 1px;
+  overflow: hidden;
+  margin-bottom: 8px;
+  background: linear-gradient(
+    to right,
+    var(--flag-red) 0% 25%,
+    var(--flag-green) 25% 50%,
+    var(--flag-white) 50% 75%,
+    var(--flag-black) 75% 100%
+  );
+}
+
+.footer-meta {
+  display: flex;
   align-items: center;
   justify-content: space-between;
-  padding-top: 8px;
-  border-top: 1px solid var(--color-border);
 }
 
 .footer-version,

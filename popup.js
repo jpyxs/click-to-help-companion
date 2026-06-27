@@ -8,8 +8,8 @@ const STORAGE_KEYS = {
   TODAY_CLICKS: "todayClicks",
   TODAY_DATE: "todayDate",
   AUTO_CLICK: "autoClick",
-  NOTIFICATIONS: "notifications",
-  SOUND: "sound"
+  TIME_RANGE: "timeRange",
+  NOTIFICATIONS: "notifications"
 };
 
 const STREAK_CIRCUMFERENCE = 2 * Math.PI * 52;
@@ -27,8 +27,9 @@ const dom = {
   statusText: document.getElementById("status-text"),
   btnClick: document.getElementById("btn-click"),
   toggleAutoclick: document.getElementById("toggle-autoclick"),
+  timeRangeSelect: document.getElementById("time-range-select"),
+  timeRangeContainer: document.getElementById("time-range-container"),
   toggleNotifications: document.getElementById("toggle-notifications"),
-  toggleSound: document.getElementById("toggle-sound"),
   streakProgress: document.querySelector(".streak-progress")
 };
 
@@ -82,8 +83,8 @@ const state = {
   todayDate: "",
   lastClickDate: "",
   autoClick: false,
-  notifications: true,
-  sound: false
+  timeRange: "morning",
+  notifications: true
 };
 
 async function loadState() {
@@ -96,10 +97,10 @@ async function loadState() {
   state.todayDate = data[STORAGE_KEYS.TODAY_DATE] || "";
   state.todayClicks = data[STORAGE_KEYS.TODAY_CLICKS] || 0;
   state.autoClick = data[STORAGE_KEYS.AUTO_CLICK] || false;
+  state.timeRange = data[STORAGE_KEYS.TIME_RANGE] || "morning";
   state.notifications = data[STORAGE_KEYS.NOTIFICATIONS] !== undefined
     ? data[STORAGE_KEYS.NOTIFICATIONS]
     : true;
-  state.sound = data[STORAGE_KEYS.SOUND] || false;
 
   reconcileDate();
 }
@@ -133,8 +134,8 @@ async function persistState() {
     [STORAGE_KEYS.TODAY_CLICKS]: state.todayClicks,
     [STORAGE_KEYS.TODAY_DATE]: state.todayDate,
     [STORAGE_KEYS.AUTO_CLICK]: state.autoClick,
-    [STORAGE_KEYS.NOTIFICATIONS]: state.notifications,
-    [STORAGE_KEYS.SOUND]: state.sound
+    [STORAGE_KEYS.TIME_RANGE]: state.timeRange,
+    [STORAGE_KEYS.NOTIFICATIONS]: state.notifications
   });
 }
 
@@ -171,8 +172,12 @@ function render() {
   dom.bestStreak.textContent = state.bestStreak;
 
   dom.toggleAutoclick.checked = state.autoClick;
+  dom.timeRangeSelect.value = state.timeRange;
   dom.toggleNotifications.checked = state.notifications;
-  dom.toggleSound.checked = state.sound;
+
+  if (state.autoClick) {
+    dom.timeRangeContainer.classList.add("visible");
+  }
 
   updateStreakRing();
   updateStatusBar();
@@ -249,15 +254,24 @@ function notifyBackground() {
 dom.btnClick.addEventListener("click", handleClick);
 
 dom.toggleAutoclick.addEventListener("change", () => {
-  handleToggle("autoClick", dom.toggleAutoclick);
+  state.autoClick = dom.toggleAutoclick.checked;
+  persistState();
+  if (state.autoClick) {
+    dom.timeRangeContainer.classList.add("visible");
+  } else {
+    dom.timeRangeContainer.classList.remove("visible");
+  }
+  notifyBackground();
+});
+
+dom.timeRangeSelect.addEventListener("change", () => {
+  state.timeRange = dom.timeRangeSelect.value;
+  persistState();
+  notifyBackground();
 });
 
 dom.toggleNotifications.addEventListener("change", () => {
   handleToggle("notifications", dom.toggleNotifications);
-});
-
-dom.toggleSound.addEventListener("change", () => {
-  handleToggle("sound", dom.toggleSound);
 });
 
 document.querySelectorAll(".footer-link").forEach((link) => {
