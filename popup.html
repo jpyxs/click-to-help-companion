@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=380, initial-scale=1.0">
+  <title>Click to Help Companion</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+
+  <!-- Header Bar -->
+  <header class="header">
+    <div class="header-left">
+      <div class="palestinian-flag" aria-label="Palestinian Flag">
+        <span class="flag-stripe flag-black"></span>
+        <span class="flag-stripe flag-white"></span>
+        <span class="flag-stripe flag-green"></span>
+        <div class="flag-triangle"></div>
+      </div>
+      <h1 class="header-title">Click to Help</h1>
+    </div>
+    <div class="badge-free-palestine" aria-label="Free Palestine">
+      <span class="badge-text">Free Palestine</span>
+    </div>
+  </header>
+
+  <!-- Hero Section — Daily Streak -->
+  <section class="hero">
+    <div class="hero-grid">
+      <div class="streak-container">
+        <div class="streak-ring">
+          <svg class="streak-svg" viewBox="0 0 120 120" aria-hidden="true">
+            <circle class="streak-track" cx="60" cy="60" r="52" />
+            <circle class="streak-progress" cx="60" cy="60" r="52" />
+          </svg>
+          <div class="streak-value">
+            <span id="streak-count" class="streak-number">0</span>
+            <span class="streak-unit">days</span>
+          </div>
+        </div>
+        <h2 class="streak-label">Daily Streak</h2>
+      </div>
+    </div>
+  </section>
+
+  <!-- Stats Grid -->
+  <section class="stats">
+    <div class="stat-card">
+      <span class="stat-value" id="total-clicks">0</span>
+      <span class="stat-label">Total Clicks</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-value" id="today-clicks">0</span>
+      <span class="stat-label">Today</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-value" id="best-streak">0</span>
+      <span class="stat-label">Best Streak</span>
+    </div>
+  </section>
+
+  <!-- Today Status -->
+  <section class="status-bar" id="status-bar">
+    <div class="status-icon" id="status-icon">&#10003;</div>
+    <span class="status-text" id="status-text">Today's click pending</span>
+  </section>
+
+  <!-- Settings Panel -->
+  <section class="settings">
+    <h3 class="settings-title">Settings</h3>
+
+    <div class="setting-row">
+      <div class="setting-info">
+        <span class="setting-name">Auto-Click Daily</span>
+        <span class="setting-desc">Automatically click at scheduled time</span>
+      </div>
+      <label class="toggle" for="toggle-autoclick">
+        <input type="checkbox" id="toggle-autoclick">
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+
+    <div class="setting-row">
+      <div class="setting-info">
+        <span class="setting-name">Notifications</span>
+        <span class="setting-desc">Remind me if I haven't clicked</span>
+      </div>
+      <label class="toggle" for="toggle-notifications">
+        <input type="checkbox" id="toggle-notifications" checked>
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+
+    <div class="setting-row">
+      <div class="setting-info">
+        <span class="setting-name">Sound Effects</span>
+        <span class="setting-desc">Play sound on successful click</span>
+      </div>
+      <label class="toggle" for="toggle-sound">
+        <input type="checkbox" id="toggle-sound">
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+  </section>
+
+  <!-- Action Button -->
+  <section class="action-section">
+    <button class="btn-click" id="btn-click">Click to Help Palestine</button>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <span class="footer-text">Powered by <strong>arab.org</strong></span>
+    <div class="footer-flag-stripe"></div>
+  </footer>
+
+  <script src="popup.js"></script>
+</body>
+</html>
