@@ -35,7 +35,7 @@ const dom = {
 /* --- Utility Functions --- */
 
 function getTodayString() {
-  return new Date().toISOString().slice(0, 10);
+  return new Date().toLocaleDateString("en-CA");
 }
 
 function loadStorage(keys) {

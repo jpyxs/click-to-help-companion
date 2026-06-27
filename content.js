@@ -1,6 +1,7 @@
 /* --- Configuration --- */
 
 const CLICK_BUTTON_SELECTORS = [
+  ".button_palestine",
   "button.click-to-help-btn",
   "button.cth-btn",
   "a.click-to-help-btn",
@@ -71,10 +72,31 @@ function isDisabled(element) {
 function performClick(button) {
   button.scrollIntoView({ behavior: "smooth", block: "center" });
 
+  const rect = button.getBoundingClientRect();
+  const clientX = rect.left + rect.width / 2 + (Math.random() * 4 - 2);
+  const clientY = rect.top + rect.height / 2 + (Math.random() * 4 - 2);
+
+  const commonProps = {
+    bubbles: true,
+    cancelable: true,
+    view: window,
+    clientX: clientX,
+    clientY: clientY
+  };
+
   setTimeout(() => {
-    button.click();
+    button.dispatchEvent(new MouseEvent("mouseover", commonProps));
+  }, randomDelay(50, 120));
+
+  setTimeout(() => {
+    button.dispatchEvent(new MouseEvent("mousedown", { ...commonProps, button: 0 }));
+  }, randomDelay(150, 280));
+
+  setTimeout(() => {
+    button.dispatchEvent(new MouseEvent("mouseup", { ...commonProps, button: 0 }));
+    button.dispatchEvent(new MouseEvent("click", { ...commonProps, button: 0 }));
     notifyBackground();
-  }, randomDelay(300, 800));
+  }, randomDelay(300, 500));
 }
 
 function notifyBackground() {
