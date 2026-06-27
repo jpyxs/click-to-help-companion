@@ -156,6 +156,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     sendResponse({ status: "ok" });
   }
 
+  if (message.type === "CLOSE_TAB") {
+    if (sender.tab?.id) {
+      chrome.tabs.remove(sender.tab.id);
+    }
+    sendResponse({ status: "ok" });
+  }
+
   return true;
 });
 

@@ -13,6 +13,8 @@ const CLICK_BUTTON_SELECTORS = [
   "[data-action='click-to-help']"
 ];
 
+const THANK_YOU_PATH = "/click-to-help/palestine/thank-you";
+const AUTO_CLOSE_DELAY_MS = 4000;
 const MAX_ATTEMPTS = 15;
 const RETRY_INTERVAL_MS = 2000;
 
@@ -98,13 +100,6 @@ function performClick(button) {
     button.dispatchEvent(new MouseEvent("mouseup", { ...commonProps, button: 0 }));
     button.dispatchEvent(new MouseEvent("click", { ...commonProps, button: 0 }));
 
-    if (button.hasAttribute("onclick")) {
-      const handler = button.getAttribute("onclick");
-      if (handler.includes("make_vote")) {
-        injectPageScript("make_vote()");
-      }
-    }
-
     notifyBackground();
   }, randomDelay(300, 500));
 }
@@ -139,17 +134,26 @@ function randomDelay(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-function injectPageScript(code) {
-  const script = document.createElement("script");
-  script.textContent = code;
-  document.documentElement.appendChild(script);
-  script.remove();
-}
-
 /* --- Initialization --- */
 
-if (document.readyState === "loading") {
+if (window.location.pathname.startsWith(THANK_YOU_PATH)) {
+  handleThankYouPage();
+} else if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", attemptClick);
 } else {
   attemptClick();
+}
+
+/* --- Thank You Page Auto-Close --- */
+
+function handleThankYouPage() {
+  notifyBackground();
+
+  setTimeout(() => {
+    chrome.runtime.sendMessage({ type: "CLOSE_TAB" }, () => {
+      if (chrome.runtime.lastError) {
+        return;
+      }
+    });
+  }, AUTO_CLOSE_DELAY_MS);
 }
