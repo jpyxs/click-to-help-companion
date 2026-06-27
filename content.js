@@ -1,17 +1,16 @@
 /* --- Configuration --- */
 
 const CLICK_BUTTON_SELECTORS = [
+  "div.clickable img.img_pointer",
+  "div.clickable img[onclick]",
+  "img.img_pointer",
+  "img[onclick*='make_vote']",
+  "div.clickable",
   ".button_palestine",
   "button.click-to-help-btn",
   "button.cth-btn",
-  "a.click-to-help-btn",
   "#click-to-help-button",
-  "[data-action='click-to-help']",
-  "button.btn-click-to-help",
-  ".click-to-help button",
-  ".cth-container button",
-  "button[class*='click']",
-  "a[class*='click-to-help']"
+  "[data-action='click-to-help']"
 ];
 
 const MAX_ATTEMPTS = 15;
@@ -31,17 +30,20 @@ function findClickButton() {
     }
   }
 
-  const allButtons = document.querySelectorAll("button, a.btn, a[role='button']");
-  for (const btn of allButtons) {
-    const text = (btn.textContent || "").toLowerCase().trim();
+  const fallbackElements = document.querySelectorAll(
+    "button, a.btn, a[role='button'], div.clickable, img[onclick]"
+  );
+  for (const el of fallbackElements) {
+    const text = (el.textContent || el.title || el.alt || "").toLowerCase().trim();
     if (
       (text.includes("click") && text.includes("help")) ||
       (text.includes("click") && text.includes("donate")) ||
+      (text.includes("you click") && text.includes("donate")) ||
       text === "click" ||
       text === "click to help"
     ) {
-      if (isVisible(btn) && !isDisabled(btn)) {
-        return btn;
+      if (isVisible(el)) {
+        return el;
       }
     }
   }
@@ -95,6 +97,14 @@ function performClick(button) {
   setTimeout(() => {
     button.dispatchEvent(new MouseEvent("mouseup", { ...commonProps, button: 0 }));
     button.dispatchEvent(new MouseEvent("click", { ...commonProps, button: 0 }));
+
+    if (button.hasAttribute("onclick")) {
+      const handler = button.getAttribute("onclick");
+      if (handler.includes("make_vote")) {
+        injectPageScript("make_vote()");
+      }
+    }
+
     notifyBackground();
   }, randomDelay(300, 500));
 }
@@ -127,6 +137,13 @@ function attemptClick() {
 
 function randomDelay(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function injectPageScript(code) {
+  const script = document.createElement("script");
+  script.textContent = code;
+  document.documentElement.appendChild(script);
+  script.remove();
 }
 
 /* --- Initialization --- */

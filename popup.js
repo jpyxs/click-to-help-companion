@@ -260,6 +260,16 @@ dom.toggleSound.addEventListener("change", () => {
   handleToggle("sound", dom.toggleSound);
 });
 
+document.getElementById("footer-repo-link").addEventListener("click", (e) => {
+  e.preventDefault();
+  const url = e.currentTarget.href;
+  if (typeof chrome !== "undefined" && chrome.tabs) {
+    chrome.tabs.create({ url: url, active: true });
+  } else {
+    window.open(url, "_blank");
+  }
+});
+
 /* --- Initialization --- */
 
 (async function init() {
