@@ -69,12 +69,12 @@ function scheduleAutoClickAlarm(timeRange) {
 
   let minHour, maxHour;
   switch (timeRange) {
-    case "morning": minHour = 8; maxHour = 11; break;
-    case "midday": minHour = 10; maxHour = 14; break;
-    case "afternoon": minHour = 13; maxHour = 17; break;
-    case "evening": minHour = 17; maxHour = 21; break;
-    case "night": minHour = 20; maxHour = 23; break;
-    default: minHour = 8; maxHour = 11;
+    case "morning": minHour = 8; maxHour = 10; break;
+    case "midday": minHour = 11; maxHour = 14; break;
+    case "afternoon": minHour = 15; maxHour = 17; break;
+    case "evening": minHour = 18; maxHour = 20; break;
+    case "night": minHour = 21; maxHour = 23; break;
+    default: minHour = 8; maxHour = 10;
   }
 
   target.setHours(randomInt(minHour, maxHour), randomInt(0, 59), 0, 0);
