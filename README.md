@@ -16,7 +16,13 @@ Arab.org runs a campaign where one click per day triggers a real donation to Pal
 
 ## Interface
 
-![Click to Help Companion popup](popup-preview.png)
+<table>
+  <tr>
+    <td>
+      <img src="img/preview.gif" />
+    </td>
+  </tr>
+</table>
 
 ## Project structure
 
@@ -80,4 +86,4 @@ If Arab.org changes their page structure, the content script selectors may need 
 
 ## License
 
-MIT
+This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
