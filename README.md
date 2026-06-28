@@ -1,11 +1,13 @@
-<div style="text-align: center; padding-bottom: 0.5em;">
-  <div style="display: inline-flex; align-items: center; gap: 10px;">
-    <img src="icons/icon-128.png" width="32" style="vertical-align: middle;" />
-    <span style="display: inline; margin: 0; font-size: 2em; font-weight: bold;">Click to Help Companion</span>
-  </div>
-</div>
-
-##
+<table align="center">
+  <tr>
+    <td style="padding-right: 10px;">
+      <img src="icons/icon-128.png" width="32" />
+    </td>
+    <td>
+      <strong style="font-size: 2em;">Click to Help Companion</strong>
+    </td>
+  </tr>
+</table>
 
 A browser extension that automates your daily click for Arab.org's Click-to-Help Palestine campaign and keeps track of your streak.
 
