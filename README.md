@@ -1,4 +1,4 @@
-<img src="icons/icon-128.png" width="48" /> Click to Help Companion
+# <img src="icons/icon-128.png" width="48" /> Click to Help Companion
 
 A browser extension that automates your daily click for Arab.org's Click-to-Help Palestine campaign and keeps track of your streak.
 
