@@ -17,7 +17,7 @@ Arab.org runs a campaign where one click per day triggers a real donation to Pal
 
 ## Features
 
-- **One-click from the toolbar** - Opens the campaign page and performs the click for you
+- **One-click from the toolbar** - Opens the campaign page so the extension can complete and confirm the click
 - **Daily streak tracker** - Visual ring counter that shows how many consecutive days you have clicked
 - **Stats dashboard** - Total lifetime clicks, today's status, and your best streak on record
 - **Auto-click mode** - Set it and forget it with a random time within your chosen window
@@ -61,15 +61,16 @@ If the icon does not show up, click the puzzle piece icon in the toolbar and pin
 
 ## How the auto-click works
 
-When you enable "Auto-Click Daily" in the settings panel, you can choose a time window. The background service worker picks a random minute within that window and schedules a Chrome alarm. This randomized timing mimics human behavior so the click does not appear as a bot-like fixed schedule.
+When you enable "Auto-Click Daily" in the settings panel, you can choose a time window. The background service worker picks a minute within that window and schedules a Chrome alarm for that day.
 
 When the alarm triggers, the extension:
 
 1. Checks if you already clicked today (skips if you did)
 2. Opens the arab.org campaign page in a background tab
 3. The content script finds the click button on the page and clicks it
-4. The tab closes automatically after the click goes through
-5. Your streak and stats update
+4. The extension waits for the campaign thank-you page
+5. Your streak and stats update only after that confirmation
+6. Auto-click tabs close after confirmation or cleanup; manually opened tabs stay open
 
 The content script searches for the button using a list of CSS selectors and falls back to scanning button text content. If the button is not found immediately (the page might still be loading), it retries every 2 seconds up to 15 times.
 
@@ -84,7 +85,6 @@ The extension stores all state in `chrome.storage.local`, so it persists across 
 - **storage** - Saving your streak, click history, and settings
 - **alarms** - Scheduling the daily auto-click and reminder
 - **notifications** - Sending you a reminder if you haven't clicked
-- **tabs** - Opening the campaign page
 - **host_permissions for arab.org** - The content script needs access to the campaign page to find and click the button
 
 ## Notes

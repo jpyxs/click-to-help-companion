@@ -14,7 +14,6 @@ const CLICK_BUTTON_SELECTORS = [
 ];
 
 const THANK_YOU_PATH = "/click-to-help/palestine/thank-you";
-const AUTO_CLOSE_DELAY_MS = 4000;
 const MAX_ATTEMPTS = 15;
 const RETRY_INTERVAL_MS = 2000;
 
@@ -99,13 +98,11 @@ function performClick(button) {
   setTimeout(() => {
     button.dispatchEvent(new MouseEvent("mouseup", { ...commonProps, button: 0 }));
     button.dispatchEvent(new MouseEvent("click", { ...commonProps, button: 0 }));
-
-    notifyBackground();
   }, randomDelay(300, 500));
 }
 
-function notifyBackground() {
-  chrome.runtime.sendMessage({ type: "CLICK_COMPLETED" }, () => {
+function notifyClickConfirmed() {
+  chrome.runtime.sendMessage({ type: "CLICK_CONFIRMED" }, () => {
     if (chrome.runtime.lastError) {
       return;
     }
@@ -147,13 +144,5 @@ if (window.location.pathname.startsWith(THANK_YOU_PATH)) {
 /* --- Thank You Page Auto-Close --- */
 
 function handleThankYouPage() {
-  notifyBackground();
-
-  setTimeout(() => {
-    chrome.runtime.sendMessage({ type: "CLOSE_TAB" }, () => {
-      if (chrome.runtime.lastError) {
-        return;
-      }
-    });
-  }, AUTO_CLOSE_DELAY_MS);
+  notifyClickConfirmed();
 }

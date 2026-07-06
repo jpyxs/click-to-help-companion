@@ -4,9 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=380, initial-scale=1.0">
   <title>Click to Help Companion</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&family=Ubuntu:wght@500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="popup.css">
 </head>
 <body>
@@ -78,10 +75,10 @@
         <div class="setting-row">
           <div class="setting-info">
             <span class="setting-name">Auto-Click Daily</span>
-            <span class="setting-desc">Click automatically within your active hours</span>
+            <span class="setting-desc" id="auto-click-desc">Click automatically within your active hours</span>
           </div>
           <label class="toggle" for="toggle-autoclick">
-            <input type="checkbox" id="toggle-autoclick">
+            <input type="checkbox" id="toggle-autoclick" aria-describedby="auto-click-desc">
             <span class="toggle-slider"></span>
           </label>
         </div>
@@ -100,10 +97,10 @@
         <div class="setting-row">
           <div class="setting-info">
             <span class="setting-name">Notifications</span>
-            <span class="setting-desc">Remind me if I haven't clicked</span>
+            <span class="setting-desc" id="notifications-desc">Remind me if I haven't clicked</span>
           </div>
           <label class="toggle" for="toggle-notifications">
-            <input type="checkbox" id="toggle-notifications" checked>
+            <input type="checkbox" id="toggle-notifications" checked aria-describedby="notifications-desc">
             <span class="toggle-slider"></span>
           </label>
         </div>

@@ -2,9 +2,11 @@
 
 const CAMPAIGN_URL = "https://arab.org/click-to-help/palestine/";
 const ALARM_AUTO_CLICK = "daily-auto-click";
+const ALARM_AUTO_CLICK_CLEANUP = "daily-auto-click-cleanup";
 const ALARM_REMINDER = "daily-reminder";
-const AUTO_CLICK_HOUR = 10;
 const REMINDER_HOUR = 18;
+const PENDING_AUTO_CLICK_TAB = "_pendingAutoClickTab";
+const PENDING_AUTO_CLICK_TIMEOUT_MINUTES = 5;
 
 const STORAGE_KEYS = {
   STREAK: "streak",
@@ -52,6 +54,8 @@ function setupAlarms() {
         scheduleAutoClickAlarm(data[STORAGE_KEYS.TIME_RANGE] || "morning");
       } else {
         chrome.alarms.clear(ALARM_AUTO_CLICK);
+        chrome.alarms.clear(ALARM_AUTO_CLICK_CLEANUP);
+        chrome.storage.local.remove(PENDING_AUTO_CLICK_TAB);
       }
 
       if (data[STORAGE_KEYS.NOTIFICATIONS]) {
@@ -86,8 +90,7 @@ function scheduleAutoClickAlarm(timeRange) {
   const delayMinutes = (target.getTime() - now.getTime()) / (1000 * 60);
 
   chrome.alarms.create(ALARM_AUTO_CLICK, {
-    delayInMinutes: delayMinutes,
-    periodInMinutes: 24 * 60
+    delayInMinutes: delayMinutes
   });
 }
 
@@ -119,6 +122,10 @@ chrome.alarms.onAlarm.addListener((alarm) => {
     handleAutoClick();
   }
 
+  if (alarm.name === ALARM_AUTO_CLICK_CLEANUP) {
+    cleanupPendingAutoClickTab();
+  }
+
   if (alarm.name === ALARM_REMINDER) {
     handleReminder();
   }
@@ -126,21 +133,71 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 
 function handleAutoClick() {
   chrome.storage.local.get(
-    [STORAGE_KEYS.AUTO_CLICK, STORAGE_KEYS.TODAY_CLICKS, STORAGE_KEYS.TODAY_DATE],
+    [
+      STORAGE_KEYS.AUTO_CLICK,
+      STORAGE_KEYS.TIME_RANGE,
+      STORAGE_KEYS.TODAY_CLICKS,
+      STORAGE_KEYS.TODAY_DATE,
+      PENDING_AUTO_CLICK_TAB
+    ],
     (data) => {
       if (!data[STORAGE_KEYS.AUTO_CLICK]) return;
+
+      scheduleAutoClickAlarm(data[STORAGE_KEYS.TIME_RANGE] || "morning");
 
       const today = getTodayString();
       const alreadyClicked =
         data[STORAGE_KEYS.TODAY_DATE] === today && data[STORAGE_KEYS.TODAY_CLICKS] > 0;
 
       if (alreadyClicked) return;
+      if (getPendingAutoClickTabId(data[PENDING_AUTO_CLICK_TAB])) return;
 
       chrome.tabs.create({ url: CAMPAIGN_URL, active: false }, (tab) => {
-        chrome.storage.local.set({ _pendingAutoClickTab: tab.id });
+        if (chrome.runtime.lastError || !tab?.id) return;
+
+        chrome.storage.local.set({
+          [PENDING_AUTO_CLICK_TAB]: {
+            tabId: tab.id,
+            createdAt: Date.now()
+          }
+        });
+
+        chrome.alarms.create(ALARM_AUTO_CLICK_CLEANUP, {
+          delayInMinutes: PENDING_AUTO_CLICK_TIMEOUT_MINUTES
+        });
       });
     }
   );
+}
+
+function cleanupPendingAutoClickTab() {
+  chrome.storage.local.get(PENDING_AUTO_CLICK_TAB, (data) => {
+    const pendingTab = data[PENDING_AUTO_CLICK_TAB];
+    const pendingTabId = getPendingAutoClickTabId(pendingTab);
+    if (!pendingTabId) return;
+
+    chrome.tabs.remove(pendingTabId, () => {
+      chrome.storage.local.remove(PENDING_AUTO_CLICK_TAB);
+    });
+  });
+}
+
+function closePendingAutoClickTab(tabId, pendingTab) {
+  const pendingTabId = getPendingAutoClickTabId(pendingTab);
+  if (!pendingTabId || tabId !== pendingTabId) return;
+
+  chrome.tabs.remove(tabId, () => {
+    chrome.storage.local.remove(PENDING_AUTO_CLICK_TAB);
+    chrome.alarms.clear(ALARM_AUTO_CLICK_CLEANUP);
+  });
+}
+
+function getPendingAutoClickTabId(pendingTab) {
+  if (typeof pendingTab === "number") {
+    return pendingTab;
+  }
+
+  return pendingTab?.tabId;
 }
 
 function handleReminder() {
@@ -178,7 +235,7 @@ chrome.notifications.onClicked.addListener((notificationId) => {
 /* --- Message Handling --- */
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.type === "CLICK_COMPLETED") {
+  if (message.type === "CLICK_CONFIRMED" || message.type === "CLICK_COMPLETED") {
     recordClick(sender.tab?.id);
     sendResponse({ status: "ok" });
   }
@@ -188,24 +245,31 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     sendResponse({ status: "ok" });
   }
 
-  if (message.type === "CLOSE_TAB") {
-    if (sender.tab?.id) {
-      chrome.tabs.remove(sender.tab.id);
-    }
-    sendResponse({ status: "ok" });
-  }
-
   return true;
+});
+
+chrome.tabs.onRemoved.addListener((tabId) => {
+  chrome.storage.local.get(PENDING_AUTO_CLICK_TAB, (data) => {
+    const pendingTab = data[PENDING_AUTO_CLICK_TAB];
+    if (getPendingAutoClickTabId(pendingTab) === tabId) {
+      chrome.storage.local.remove(PENDING_AUTO_CLICK_TAB);
+      chrome.alarms.clear(ALARM_AUTO_CLICK_CLEANUP);
+    }
+  });
 });
 
 /* --- Click Recording --- */
 
 function recordClick(tabId) {
-  chrome.storage.local.get(Object.values(STORAGE_KEYS), (data) => {
+  chrome.storage.local.get([...Object.values(STORAGE_KEYS), PENDING_AUTO_CLICK_TAB], (data) => {
     const today = getTodayString();
     const todayClicks = data[STORAGE_KEYS.TODAY_CLICKS] || 0;
+    const pendingTab = data[PENDING_AUTO_CLICK_TAB];
 
-    if (data[STORAGE_KEYS.TODAY_DATE] === today && todayClicks > 0) return;
+    if (data[STORAGE_KEYS.TODAY_DATE] === today && todayClicks > 0) {
+      closePendingAutoClickTab(tabId, pendingTab);
+      return;
+    }
 
     let streak = data[STORAGE_KEYS.STREAK] || 0;
     const lastClickDate = data[STORAGE_KEYS.LAST_CLICK_DATE] || "";
@@ -227,20 +291,19 @@ function recordClick(tabId) {
     const bestStreak = Math.max(streak, data[STORAGE_KEYS.BEST_STREAK] || 0);
     const totalClicks = (data[STORAGE_KEYS.TOTAL_CLICKS] || 0) + 1;
 
-    chrome.storage.local.set({
-      [STORAGE_KEYS.STREAK]: streak,
-      [STORAGE_KEYS.BEST_STREAK]: bestStreak,
-      [STORAGE_KEYS.TOTAL_CLICKS]: totalClicks,
-      [STORAGE_KEYS.TODAY_CLICKS]: 1,
-      [STORAGE_KEYS.TODAY_DATE]: today,
-      [STORAGE_KEYS.LAST_CLICK_DATE]: today
-    });
-
-    const pendingTabId = data._pendingAutoClickTab;
-    if (pendingTabId && tabId === pendingTabId) {
-      chrome.tabs.remove(tabId);
-      chrome.storage.local.remove("_pendingAutoClickTab");
-    }
+    chrome.storage.local.set(
+      {
+        [STORAGE_KEYS.STREAK]: streak,
+        [STORAGE_KEYS.BEST_STREAK]: bestStreak,
+        [STORAGE_KEYS.TOTAL_CLICKS]: totalClicks,
+        [STORAGE_KEYS.TODAY_CLICKS]: 1,
+        [STORAGE_KEYS.TODAY_DATE]: today,
+        [STORAGE_KEYS.LAST_CLICK_DATE]: today
+      },
+      () => {
+        closePendingAutoClickTab(tabId, pendingTab);
+      }
+    );
   });
 }
 

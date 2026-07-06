@@ -175,9 +175,7 @@ function render() {
   dom.timeRangeSelect.value = state.timeRange;
   dom.toggleNotifications.checked = state.notifications;
 
-  if (state.autoClick) {
-    dom.timeRangeContainer.classList.add("visible");
-  }
+  dom.timeRangeContainer.classList.toggle("visible", state.autoClick);
 
   updateStreakRing();
   updateStatusBar();
@@ -185,49 +183,39 @@ function render() {
 
 /* --- Click Handler --- */
 
-async function handleClick() {
+function handleClick() {
   if (state.todayClicks > 0) return;
-
-  const today = getTodayString();
-  const previousLastClick = state.lastClickDate;
-
-  state.todayClicks = 1;
-  state.totalClicks += 1;
-  state.lastClickDate = today;
-
-  if (previousLastClick) {
-    const lastDate = new Date(previousLastClick);
-    const todayDate = new Date(today);
-    const diffDays = Math.floor(
-      (todayDate.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24)
-    );
-
-    if (diffDays > 1) {
-      state.streak = 1;
-    } else {
-      state.streak += 1;
-    }
-  } else {
-    state.streak = 1;
-  }
-
-  if (state.streak > state.bestStreak) {
-    state.bestStreak = state.streak;
-  }
-
-  await persistState();
-  render();
 
   openCampaignPage();
 }
 
 function openCampaignPage() {
   const campaignUrl = "https://arab.org/click-to-help/palestine/";
+  const previousText = dom.btnClick.textContent;
+
+  dom.btnClick.disabled = true;
+  dom.btnClick.textContent = "Opening Campaign...";
 
   if (typeof chrome !== "undefined" && chrome.tabs) {
-    chrome.tabs.create({ url: campaignUrl, active: true });
+    chrome.tabs.create({ url: campaignUrl, active: true }, () => {
+      if (chrome.runtime.lastError) {
+        dom.btnClick.disabled = false;
+        dom.btnClick.textContent = previousText;
+        return;
+      }
+
+      dom.btnClick.textContent = "Waiting for Confirmation";
+      setTimeout(() => {
+        if (state.todayClicks === 0) {
+          dom.btnClick.disabled = false;
+          dom.btnClick.textContent = previousText;
+        }
+      }, 1200);
+    });
   } else {
     window.open(campaignUrl, "_blank");
+    dom.btnClick.disabled = false;
+    dom.btnClick.textContent = previousText;
   }
 }
 
