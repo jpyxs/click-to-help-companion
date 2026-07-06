@@ -4,7 +4,7 @@
 
 <h1 align="center">Click to Help Companion</h1>
 
-A small browser extension for Arab.org's Click-to-Help Palestine campaign. It helps you open the campaign from the toolbar, keeps a local streak, and can remind you or run a daily auto-click when you turn that on.
+A small browser extension for Arab.org's Click-to-Help campaigns, starting with Palestine. It helps you open the campaign from the toolbar, keeps a local streak, and can remind you or run a daily auto-click when you turn that on.
 
 The extension only counts a click after the campaign reaches the thank-you page. Opening the campaign page or attempting a click is not enough to update your stats.
 
@@ -14,6 +14,7 @@ The extension only counts a click after the campaign reaches the thank-you page.
 - **Confirmed click tracking** - Stats update only after the thank-you page loads.
 - **Daily streaks** - See your current streak, best streak, total clicks, and today's status.
 - **Optional auto-click** - Choose a daily time window and let the extension open the campaign in the background.
+- **Same-day catch-up** - If your browser was closed during your chosen window, the extension can try again when you open it later that day.
 - **Reminder notifications** - Get an evening reminder if today's click has not been confirmed.
 
 ## Preview
@@ -41,7 +42,9 @@ To click manually, press **Click to Help Palestine**. The campaign page opens, a
 
 To use auto-click, turn on **Auto-Click Daily** and choose a time window. The extension schedules one daily attempt within that window. If today's click has already been confirmed, it skips the attempt.
 
-To use reminders, leave **Notifications** enabled. If no click has been confirmed by evening, your browser will show a reminder.
+If your browser was closed during that window, the extension checks when it starts again. When the window has already passed and today's click is still unconfirmed, it opens a same-day catch-up attempt instead of silently waiting until tomorrow.
+
+To use reminders, leave **Notifications** enabled. If no click has been confirmed by evening, your browser will show a reminder the next time it is able to.
 
 ## How confirmation works
 
@@ -61,6 +64,8 @@ When the alarm triggers, the extension:
 6. Auto-click tabs close after confirmation or cleanup; manually opened tabs stay open
 
 The content script retries every 2 seconds up to 15 times while the page loads. Auto-click tabs also have cleanup handling so a failed attempt does not leave hidden state behind.
+
+Browser alarms only run while the browser can run extensions. If the browser is closed or the computer is asleep during the selected window, the same-day catch-up check handles the next available opportunity.
 
 ## Streaks and storage
 

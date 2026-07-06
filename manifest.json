@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Click to Help Companion",
-  "version": "1.0.0",
-  "description": "Automates and tracks your daily clicks for Arab.org's Click-to-Help Palestine campaign.",
+  "version": "1.1.0",
+  "description": "Helps automate and track confirmed daily clicks for Arab.org's Click-to-Help Palestine campaign.",
 
   "permissions": [
     "storage",

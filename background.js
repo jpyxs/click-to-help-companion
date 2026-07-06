@@ -7,6 +7,7 @@ const ALARM_REMINDER = "daily-reminder";
 const REMINDER_HOUR = 18;
 const PENDING_AUTO_CLICK_TAB = "_pendingAutoClickTab";
 const PENDING_AUTO_CLICK_TIMEOUT_MINUTES = 5;
+const MIN_ALARM_DELAY_MINUTES = 0.1;
 
 const STORAGE_KEYS = {
   STREAK: "streak",
@@ -17,7 +18,8 @@ const STORAGE_KEYS = {
   TODAY_DATE: "todayDate",
   AUTO_CLICK: "autoClick",
   TIME_RANGE: "timeRange",
-  NOTIFICATIONS: "notifications"
+  NOTIFICATIONS: "notifications",
+  LAST_REMINDER_DATE: "lastReminderDate"
 };
 
 /* --- Lifecycle Events --- */
@@ -33,7 +35,8 @@ chrome.runtime.onInstalled.addListener((details) => {
       [STORAGE_KEYS.TODAY_DATE]: "",
       [STORAGE_KEYS.AUTO_CLICK]: false,
       [STORAGE_KEYS.TIME_RANGE]: "morning",
-      [STORAGE_KEYS.NOTIFICATIONS]: true
+      [STORAGE_KEYS.NOTIFICATIONS]: true,
+      [STORAGE_KEYS.LAST_REMINDER_DATE]: ""
     });
   }
 
@@ -48,10 +51,20 @@ chrome.runtime.onStartup.addListener(() => {
 
 function setupAlarms() {
   chrome.storage.local.get(
-    [STORAGE_KEYS.AUTO_CLICK, STORAGE_KEYS.TIME_RANGE, STORAGE_KEYS.NOTIFICATIONS],
+    [
+      STORAGE_KEYS.AUTO_CLICK,
+      STORAGE_KEYS.TIME_RANGE,
+      STORAGE_KEYS.NOTIFICATIONS,
+      STORAGE_KEYS.TODAY_CLICKS,
+      STORAGE_KEYS.TODAY_DATE,
+      PENDING_AUTO_CLICK_TAB
+    ],
     (data) => {
+      let openedCatchUpTab = false;
+
       if (data[STORAGE_KEYS.AUTO_CLICK]) {
         scheduleAutoClickAlarm(data[STORAGE_KEYS.TIME_RANGE] || "morning");
+        openedCatchUpTab = handleMissedAutoClickWindow(data);
       } else {
         chrome.alarms.clear(ALARM_AUTO_CLICK);
         chrome.alarms.clear(ALARM_AUTO_CLICK_CLEANUP);
@@ -60,6 +73,9 @@ function setupAlarms() {
 
       if (data[STORAGE_KEYS.NOTIFICATIONS]) {
         scheduleAlarm(ALARM_REMINDER, REMINDER_HOUR);
+        if (!openedCatchUpTab) {
+          handleMissedReminder();
+        }
       } else {
         chrome.alarms.clear(ALARM_REMINDER);
       }
@@ -69,29 +85,67 @@ function setupAlarms() {
 
 function scheduleAutoClickAlarm(timeRange) {
   const now = new Date();
-  const target = new Date();
-
-  let minHour, maxHour;
-  switch (timeRange) {
-    case "morning": minHour = 8; maxHour = 10; break;
-    case "midday": minHour = 11; maxHour = 14; break;
-    case "afternoon": minHour = 15; maxHour = 17; break;
-    case "evening": minHour = 18; maxHour = 20; break;
-    case "night": minHour = 21; maxHour = 23; break;
-    default: minHour = 8; maxHour = 10;
-  }
-
-  target.setHours(randomInt(minHour, maxHour), randomInt(0, 59), 0, 0);
-
-  if (target <= now) {
-    target.setDate(target.getDate() + 1);
-  }
-
-  const delayMinutes = (target.getTime() - now.getTime()) / (1000 * 60);
+  const target = getNextAutoClickTarget(timeRange, now);
+  const delayMinutes = Math.max(
+    (target.getTime() - now.getTime()) / (1000 * 60),
+    MIN_ALARM_DELAY_MINUTES
+  );
 
   chrome.alarms.create(ALARM_AUTO_CLICK, {
     delayInMinutes: delayMinutes
   });
+}
+
+function getNextAutoClickTarget(timeRange, now) {
+  const todayWindow = getTimeRangeWindow(timeRange, now);
+  let start = todayWindow.start;
+  let end = todayWindow.end;
+
+  if (now > end) {
+    const tomorrow = new Date(now);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowWindow = getTimeRangeWindow(timeRange, tomorrow);
+    start = tomorrowWindow.start;
+    end = tomorrowWindow.end;
+  } else if (now > start) {
+    start = new Date(now.getTime() + MIN_ALARM_DELAY_MINUTES * 60 * 1000);
+  }
+
+  if (start > end) {
+    const tomorrow = new Date(now);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowWindow = getTimeRangeWindow(timeRange, tomorrow);
+    start = tomorrowWindow.start;
+    end = tomorrowWindow.end;
+  }
+
+  return randomDateBetween(start, end);
+}
+
+function getTimeRangeWindow(timeRange, date) {
+  const { minHour, maxHour } = getTimeRangeHours(timeRange);
+  const start = new Date(date);
+  const end = new Date(date);
+
+  start.setHours(minHour, 0, 0, 0);
+  end.setHours(maxHour, 59, 59, 999);
+
+  return { start, end };
+}
+
+function getTimeRangeHours(timeRange) {
+  switch (timeRange) {
+    case "morning": return { minHour: 8, maxHour: 10 };
+    case "midday": return { minHour: 11, maxHour: 14 };
+    case "afternoon": return { minHour: 15, maxHour: 17 };
+    case "evening": return { minHour: 18, maxHour: 20 };
+    case "night": return { minHour: 21, maxHour: 23 };
+    default: return { minHour: 8, maxHour: 10 };
+  }
+}
+
+function randomDateBetween(start, end) {
+  return new Date(randomInt(start.getTime(), end.getTime()));
 }
 
 function randomInt(min, max) {
@@ -113,6 +167,28 @@ function scheduleAlarm(name, targetHour) {
     delayInMinutes: delayMinutes,
     periodInMinutes: 24 * 60
   });
+}
+
+function handleMissedAutoClickWindow(data) {
+  const today = getTodayString();
+  const alreadyClicked =
+    data[STORAGE_KEYS.TODAY_DATE] === today && data[STORAGE_KEYS.TODAY_CLICKS] > 0;
+
+  if (alreadyClicked) return false;
+  if (getPendingAutoClickTabId(data[PENDING_AUTO_CLICK_TAB])) return false;
+
+  const selectedWindow = getTimeRangeWindow(data[STORAGE_KEYS.TIME_RANGE] || "morning", new Date());
+  if (new Date() <= selectedWindow.end) return false;
+
+  openAutoClickTab();
+  return true;
+}
+
+function handleMissedReminder() {
+  const now = new Date();
+  if (now.getHours() < REMINDER_HOUR) return;
+
+  handleReminder();
 }
 
 /* --- Alarm Handlers --- */
@@ -152,22 +228,26 @@ function handleAutoClick() {
       if (alreadyClicked) return;
       if (getPendingAutoClickTabId(data[PENDING_AUTO_CLICK_TAB])) return;
 
-      chrome.tabs.create({ url: CAMPAIGN_URL, active: false }, (tab) => {
-        if (chrome.runtime.lastError || !tab?.id) return;
-
-        chrome.storage.local.set({
-          [PENDING_AUTO_CLICK_TAB]: {
-            tabId: tab.id,
-            createdAt: Date.now()
-          }
-        });
-
-        chrome.alarms.create(ALARM_AUTO_CLICK_CLEANUP, {
-          delayInMinutes: PENDING_AUTO_CLICK_TIMEOUT_MINUTES
-        });
-      });
+      openAutoClickTab();
     }
   );
+}
+
+function openAutoClickTab() {
+  chrome.tabs.create({ url: CAMPAIGN_URL, active: false }, (tab) => {
+    if (chrome.runtime.lastError || !tab?.id) return;
+
+    chrome.storage.local.set({
+      [PENDING_AUTO_CLICK_TAB]: {
+        tabId: tab.id,
+        createdAt: Date.now()
+      }
+    });
+
+    chrome.alarms.create(ALARM_AUTO_CLICK_CLEANUP, {
+      delayInMinutes: PENDING_AUTO_CLICK_TIMEOUT_MINUTES
+    });
+  });
 }
 
 function cleanupPendingAutoClickTab() {
@@ -209,7 +289,12 @@ function getPendingAutoClickTabId(pendingTab) {
 
 function handleReminder() {
   chrome.storage.local.get(
-    [STORAGE_KEYS.NOTIFICATIONS, STORAGE_KEYS.TODAY_CLICKS, STORAGE_KEYS.TODAY_DATE],
+    [
+      STORAGE_KEYS.NOTIFICATIONS,
+      STORAGE_KEYS.TODAY_CLICKS,
+      STORAGE_KEYS.TODAY_DATE,
+      STORAGE_KEYS.LAST_REMINDER_DATE
+    ],
     (data) => {
       if (!data[STORAGE_KEYS.NOTIFICATIONS]) return;
 
@@ -218,6 +303,7 @@ function handleReminder() {
         data[STORAGE_KEYS.TODAY_DATE] === today && data[STORAGE_KEYS.TODAY_CLICKS] > 0;
 
       if (alreadyClicked) return;
+      if (data[STORAGE_KEYS.LAST_REMINDER_DATE] === today) return;
 
       chrome.notifications.create("click-reminder", {
         type: "basic",
@@ -225,6 +311,9 @@ function handleReminder() {
         title: "Click to Help Palestine",
         message: "You haven't clicked today. Keep your streak alive!",
         priority: 2
+      }, () => {
+        if (chrome.runtime.lastError) return;
+        chrome.storage.local.set({ [STORAGE_KEYS.LAST_REMINDER_DATE]: today });
       });
     }
   );
