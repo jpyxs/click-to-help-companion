@@ -1,97 +1,94 @@
-<table align="center">
-  <tr>
-    <td style="padding-right: 10px;">
-      <img src="icons/icon-128.png" width="32" />
-    </td>
-    <td>
-      <strong style="font-size: 2em;">Click to Help Companion</strong>
-    </td>
-  </tr>
-</table>
+<p align="center">
+  <img src="./icons/icon-128.png" alt="Click to Help Companion icon" width="72">
+</p>
 
-A browser extension that automates your daily click for Arab.org's Click-to-Help Palestine campaign and keeps track of your streak.
+<h1 align="center">Click to Help Companion</h1>
 
-## What this does
+A small browser extension for Arab.org's Click-to-Help Palestine campaign. It helps you open the campaign from the toolbar, keeps a local streak, and can remind you or run a daily auto-click when you turn that on.
 
-Arab.org runs a campaign where one click per day triggers a real donation to Palestine at no cost to you. The problem is remembering to do it every single day. This extension solves that by letting you click directly from the toolbar, tracking your daily streak, and optionally automating the whole thing so you never miss a day.
+The extension only counts a click after the campaign reaches the thank-you page. Opening the campaign page or attempting a click is not enough to update your stats.
 
 ## Features
 
-- **One-click from the toolbar** - Opens the campaign page so the extension can complete and confirm the click
-- **Daily streak tracker** - Visual ring counter that shows how many consecutive days you have clicked
-- **Stats dashboard** - Total lifetime clicks, today's status, and your best streak on record
-- **Auto-click mode** - Set it and forget it with a random time within your chosen window
-- **Reminder notifications** - If you haven't clicked by evening, you get a nudge
+- **Toolbar access** - Open the Palestine campaign page from the extension popup.
+- **Confirmed click tracking** - Stats update only after the thank-you page loads.
+- **Daily streaks** - See your current streak, best streak, total clicks, and today's status.
+- **Optional auto-click** - Choose a daily time window and let the extension open the campaign in the background.
+- **Reminder notifications** - Get an evening reminder if today's click has not been confirmed.
 
-## Walkthrough
+## Preview
 
-<table>
-  <tr>
-    <td>
-      <img src="img/preview.webp" />
-    </td>
-  </tr>
-</table>
-
-## Project structure
-
-```
-click-to-help-companion/
-  manifest.json       Chrome extension manifest (MV3)
-  popup.html          Popup UI structure
-  popup.css           Styling (flat geometric layout, arab.org color scheme)
-  popup.js            Popup logic, streak state, settings
-  background.js       Service worker for alarms, auto-click, notifications
-  content.js          Content script injected on arab.org to find and click the button
-  icons/
-    icon-16.png       Toolbar icon
-    icon-48.png       Extensions page icon
-    icon-128.png      Chrome Web Store icon
-```
+<p align="center">
+  <img src="./img/preview.webp" alt="Click to Help Companion popup preview" width="760">
+</p>
 
 ## Installation
 
-1. Go to `chrome://extensions/`
-2. Turn on "Developer mode" in the top right corner
-3. Click "Load unpacked"
+1. Open the extensions page in a Chromium-based browser.
+   For example: `chrome://extensions/`, `edge://extensions/`, or `brave://extensions/`.
+2. Turn on developer mode.
+3. Click "Load unpacked".
 4. Select the `click-to-help-companion` folder
 5. The extension icon should appear in your toolbar
 
 If the icon does not show up, click the puzzle piece icon in the toolbar and pin "Click to Help Companion."
 
-## How the auto-click works
+## How to use it
 
-When you enable "Auto-Click Daily" in the settings panel, you can choose a time window. The background service worker picks a minute within that window and schedules a Chrome alarm for that day.
+Open the extension from your toolbar. The popup shows your streak, total clicks, today's status, and your settings.
+
+To click manually, press **Click to Help Palestine**. The campaign page opens, and the extension will try to complete the click on the page. Your stats update only if the page reaches the thank-you screen.
+
+To use auto-click, turn on **Auto-Click Daily** and choose a time window. The extension schedules one daily attempt within that window. If today's click has already been confirmed, it skips the attempt.
+
+To use reminders, leave **Notifications** enabled. If no click has been confirmed by evening, your browser will show a reminder.
+
+## How confirmation works
+
+The content script runs only on Arab.org's Click-to-Help pages. It looks for the campaign click target, tries the click, and then waits for the Palestine thank-you page. Once that page loads, the background service worker records the click.
+
+This keeps the streak from moving ahead just because a tab opened or a click was attempted. If Arab.org changes the campaign page, the selectors in `content.js` may need an update.
+
+## Auto-click details
 
 When the alarm triggers, the extension:
 
 1. Checks if you already clicked today (skips if you did)
-2. Opens the arab.org campaign page in a background tab
+2. Opens the Arab.org campaign page in a background tab
 3. The content script finds the click button on the page and clicks it
 4. The extension waits for the campaign thank-you page
 5. Your streak and stats update only after that confirmation
 6. Auto-click tabs close after confirmation or cleanup; manually opened tabs stay open
 
-The content script searches for the button using a list of CSS selectors and falls back to scanning button text content. If the button is not found immediately (the page might still be loading), it retries every 2 seconds up to 15 times.
+The content script retries every 2 seconds up to 15 times while the page loads. Auto-click tabs also have cleanup handling so a failed attempt does not leave hidden state behind.
 
-## How the streak works
+## Streaks and storage
 
-Your streak increments by 1 each day you click. If you miss a day (more than 24 hours pass between clicks), the streak resets to zero. The ring in the popup fills up as your streak grows, hitting full circle at 30 days.
+Your streak increases by 1 for each calendar day with a confirmed click. If more than one day passes between confirmed clicks, the streak resets. The ring in the popup fills over 30 days.
 
-The extension stores all state in `chrome.storage.local`, so it persists across browser restarts.
+All streaks, settings, and click counts are stored in `chrome.storage.local` on your browser. The extension does not use an external account or send your stats to a server.
 
 ## Permissions
 
-- **storage** - Saving your streak, click history, and settings
+- **storage** - Saving your streak, click counts, dates, and settings
 - **alarms** - Scheduling the daily auto-click and reminder
 - **notifications** - Sending you a reminder if you haven't clicked
-- **host_permissions for arab.org** - The content script needs access to the campaign page to find and click the button
+- **host permissions for Arab.org** - Allowing the content script to run on the campaign page
 
-## Notes
+## Fonts
 
-This is a personal project. It is not affiliated with or endorsed by Arab.org. The campaign URL is `https://arab.org/click-to-help/palestine/` and the extension simply automates visiting that page and clicking the button, the same action you would do manually.
+The popup uses Open Sans and Ubuntu to stay close to Arab.org's typography. The font files are bundled in `fonts/` and loaded locally, so the extension does not contact Google Fonts at runtime.
 
-If Arab.org changes their page structure, the content script selectors may need updating. Open an issue or submit a PR if the auto-click stops working.
+## For contributors
+
+The extension is intentionally plain: no build step, no framework, and no remote runtime assets. The main files are:
+
+- `manifest.json` for the extension configuration
+- `popup.html`, `popup.css`, and `popup.js` for the toolbar popup
+- `background.js` for alarms, reminders, and confirmed click recording
+- `content.js` for the Arab.org campaign page interaction
+
+This project is not affiliated with or endorsed by Arab.org.
 
 ## License
 

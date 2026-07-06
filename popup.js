@@ -159,7 +159,7 @@ function updateStatusBar() {
   } else {
     dom.statusBar.classList.remove("completed");
     dom.statusIcon.innerHTML = "&#8226;";
-    dom.statusText.textContent = "Today's click pending";
+    dom.statusText.textContent = "Pending until thank-you page";
     dom.btnClick.disabled = false;
     dom.btnClick.textContent = "Click to Help Palestine";
   }
@@ -208,7 +208,7 @@ function openCampaignPage() {
       setTimeout(() => {
         if (state.todayClicks === 0) {
           dom.btnClick.disabled = false;
-          dom.btnClick.textContent = previousText;
+          dom.btnClick.textContent = "Click to Help Palestine";
         }
       }, 1200);
     });

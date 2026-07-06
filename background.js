@@ -177,7 +177,11 @@ function cleanupPendingAutoClickTab() {
     if (!pendingTabId) return;
 
     chrome.tabs.remove(pendingTabId, () => {
+      if (chrome.runtime.lastError) {
+        // The tab may already be gone; the pending state should still be cleared.
+      }
       chrome.storage.local.remove(PENDING_AUTO_CLICK_TAB);
+      chrome.alarms.clear(ALARM_AUTO_CLICK_CLEANUP);
     });
   });
 }
@@ -187,6 +191,9 @@ function closePendingAutoClickTab(tabId, pendingTab) {
   if (!pendingTabId || tabId !== pendingTabId) return;
 
   chrome.tabs.remove(tabId, () => {
+    if (chrome.runtime.lastError) {
+      // The tab may already be gone; the pending state should still be cleared.
+    }
     chrome.storage.local.remove(PENDING_AUTO_CLICK_TAB);
     chrome.alarms.clear(ALARM_AUTO_CLICK_CLEANUP);
   });
