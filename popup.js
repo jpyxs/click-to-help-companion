@@ -274,6 +274,14 @@ document.querySelectorAll(".footer-link").forEach((link) => {
   });
 });
 
+if (typeof chrome !== "undefined" && chrome.storage && chrome.storage.onChanged) {
+  chrome.storage.onChanged.addListener((changes, areaName) => {
+    if (areaName === "local") {
+      loadState().then(render);
+    }
+  });
+}
+
 /* --- Initialization --- */
 
 (async function init() {

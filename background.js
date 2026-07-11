@@ -63,7 +63,10 @@ function setupAlarms() {
       let openedCatchUpTab = false;
 
       if (data[STORAGE_KEYS.AUTO_CLICK]) {
-        scheduleAutoClickAlarm(data[STORAGE_KEYS.TIME_RANGE] || "morning");
+        const today = getTodayString();
+        const alreadyClicked =
+          data[STORAGE_KEYS.TODAY_DATE] === today && data[STORAGE_KEYS.TODAY_CLICKS] > 0;
+        scheduleAutoClickAlarm(data[STORAGE_KEYS.TIME_RANGE] || "morning", alreadyClicked);
         openedCatchUpTab = handleMissedAutoClickWindow(data);
       } else {
         chrome.alarms.clear(ALARM_AUTO_CLICK);
@@ -83,9 +86,9 @@ function setupAlarms() {
   );
 }
 
-function scheduleAutoClickAlarm(timeRange) {
+function scheduleAutoClickAlarm(timeRange, alreadyClicked = false) {
   const now = new Date();
-  const target = getNextAutoClickTarget(timeRange, now);
+  const target = getNextAutoClickTarget(timeRange, now, alreadyClicked);
   const delayMinutes = Math.max(
     (target.getTime() - now.getTime()) / (1000 * 60),
     MIN_ALARM_DELAY_MINUTES
@@ -96,12 +99,12 @@ function scheduleAutoClickAlarm(timeRange) {
   });
 }
 
-function getNextAutoClickTarget(timeRange, now) {
+function getNextAutoClickTarget(timeRange, now, alreadyClicked = false) {
   const todayWindow = getTimeRangeWindow(timeRange, now);
   let start = todayWindow.start;
   let end = todayWindow.end;
 
-  if (now > end) {
+  if (alreadyClicked || now > end) {
     const tomorrow = new Date(now);
     tomorrow.setDate(tomorrow.getDate() + 1);
     const tomorrowWindow = getTimeRangeWindow(timeRange, tomorrow);
@@ -219,11 +222,11 @@ function handleAutoClick() {
     (data) => {
       if (!data[STORAGE_KEYS.AUTO_CLICK]) return;
 
-      scheduleAutoClickAlarm(data[STORAGE_KEYS.TIME_RANGE] || "morning");
-
       const today = getTodayString();
       const alreadyClicked =
         data[STORAGE_KEYS.TODAY_DATE] === today && data[STORAGE_KEYS.TODAY_CLICKS] > 0;
+
+      scheduleAutoClickAlarm(data[STORAGE_KEYS.TIME_RANGE] || "morning", alreadyClicked);
 
       if (alreadyClicked) return;
       if (getPendingAutoClickTabId(data[PENDING_AUTO_CLICK_TAB])) return;
@@ -398,6 +401,7 @@ function recordClick(tabId) {
       },
       () => {
         closePendingAutoClickTab(tabId, pendingTab);
+        setupAlarms();
       }
     );
   });
