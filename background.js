@@ -50,6 +50,7 @@ chrome.runtime.onStartup.addListener(() => {
 /* --- Alarm Management --- */
 
 function setupAlarms() {
+  updateBadge();
   chrome.storage.local.get(
     [
       STORAGE_KEYS.AUTO_CLICK,
@@ -254,19 +255,28 @@ function openAutoClickTab() {
 }
 
 function cleanupPendingAutoClickTab() {
-  chrome.storage.local.get(PENDING_AUTO_CLICK_TAB, (data) => {
-    const pendingTab = data[PENDING_AUTO_CLICK_TAB];
-    const pendingTabId = getPendingAutoClickTabId(pendingTab);
-    if (!pendingTabId) return;
+  chrome.storage.local.get(
+    [PENDING_AUTO_CLICK_TAB, STORAGE_KEYS.AUTO_CLICK],
+    (data) => {
+      const pendingTab = data[PENDING_AUTO_CLICK_TAB];
+      const pendingTabId = getPendingAutoClickTabId(pendingTab);
+      if (!pendingTabId) return;
 
-    chrome.tabs.remove(pendingTabId, () => {
-      if (chrome.runtime.lastError) {
-        // The tab may already be gone; the pending state should still be cleared.
-      }
-      chrome.storage.local.remove(PENDING_AUTO_CLICK_TAB);
-      chrome.alarms.clear(ALARM_AUTO_CLICK_CLEANUP);
-    });
-  });
+      chrome.tabs.remove(pendingTabId, () => {
+        if (chrome.runtime.lastError) {
+          // The tab may already be gone; the pending state should still be cleared.
+        }
+        chrome.storage.local.remove(PENDING_AUTO_CLICK_TAB);
+        chrome.alarms.clear(ALARM_AUTO_CLICK_CLEANUP);
+
+        if (data[STORAGE_KEYS.AUTO_CLICK]) {
+          chrome.alarms.create(ALARM_AUTO_CLICK, {
+            delayInMinutes: 15
+          });
+        }
+      });
+    }
+  );
 }
 
 function closePendingAutoClickTab(tabId, pendingTab) {
@@ -283,11 +293,17 @@ function closePendingAutoClickTab(tabId, pendingTab) {
 }
 
 function getPendingAutoClickTabId(pendingTab) {
-  if (typeof pendingTab === "number") {
-    return pendingTab;
+  if (!pendingTab) return null;
+
+  const tabId = typeof pendingTab === "number" ? pendingTab : pendingTab.tabId;
+  const createdAt = typeof pendingTab === "object" ? pendingTab.createdAt : null;
+
+  if (createdAt && Date.now() - createdAt > PENDING_AUTO_CLICK_TIMEOUT_MINUTES * 60 * 1000) {
+    chrome.storage.local.remove(PENDING_AUTO_CLICK_TAB);
+    return null;
   }
 
-  return pendingTab?.tabId;
+  return tabId;
 }
 
 function handleReminder() {
@@ -411,4 +427,27 @@ function recordClick(tabId) {
 
 function getTodayString() {
   return new Date().toLocaleDateString("en-CA");
+}
+
+function updateBadge() {
+  chrome.storage.local.get([STORAGE_KEYS.TODAY_CLICKS, STORAGE_KEYS.TODAY_DATE], (data) => {
+    const today = getTodayString();
+    const clickedToday =
+      data[STORAGE_KEYS.TODAY_DATE] === today && data[STORAGE_KEYS.TODAY_CLICKS] > 0;
+
+    if (clickedToday) {
+      chrome.action.setBadgeText({ text: "" });
+    } else {
+      chrome.action.setBadgeText({ text: "•" });
+      chrome.action.setBadgeBackgroundColor({ color: "#F4591C" });
+    }
+  });
+}
+
+if (typeof chrome !== "undefined" && chrome.storage && chrome.storage.onChanged) {
+  chrome.storage.onChanged.addListener((changes, areaName) => {
+    if (areaName === "local") {
+      updateBadge();
+    }
+  });
 }
