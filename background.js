@@ -324,15 +324,15 @@ function handleReminder() {
       if (alreadyClicked) return;
       if (data[STORAGE_KEYS.LAST_REMINDER_DATE] === today) return;
 
+      // Write the date before creating the notification so a concurrent
+      // setupAlarms() call can't fire a second reminder while this is in-flight.
+      chrome.storage.local.set({ [STORAGE_KEYS.LAST_REMINDER_DATE]: today });
       chrome.notifications.create("click-reminder", {
         type: "basic",
         iconUrl: "icons/icon-128.png",
         title: "Click to Help Palestine",
         message: "You haven't clicked today. Keep your streak alive!",
         priority: 2
-      }, () => {
-        if (chrome.runtime.lastError) return;
-        chrome.storage.local.set({ [STORAGE_KEYS.LAST_REMINDER_DATE]: today });
       });
     }
   );
@@ -350,7 +350,7 @@ chrome.notifications.onClicked.addListener((notificationId) => {
 /* --- Message Handling --- */
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.type === "CLICK_CONFIRMED" || message.type === "CLICK_COMPLETED") {
+  if (message.type === "CLICK_CONFIRMED") {
     recordClick(sender.tab?.id);
     sendResponse({ status: "ok" });
   }

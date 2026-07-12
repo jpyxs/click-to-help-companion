@@ -15,6 +15,7 @@ const STORAGE_KEYS = {
 const STREAK_CIRCUMFERENCE = 2 * Math.PI * 52;
 const MAX_STREAK_DISPLAY = 30;
 const ALARM_AUTO_CLICK = "daily-auto-click";
+const CAMPAIGN_URL = "https://arab.org/click-to-help/palestine/";
 
 /* --- DOM References --- */
 
@@ -105,7 +106,11 @@ async function loadState() {
     ? data[STORAGE_KEYS.NOTIFICATIONS]
     : true;
 
-  reconcileDate();
+  const dateChanged = reconcileDate();
+  if (dateChanged) {
+    // Persist the reset so background.js reads the correct streak/clicks on next click
+    await persistState();
+  }
 }
 
 function reconcileDate() {
@@ -125,7 +130,11 @@ function reconcileDate() {
         state.streak = 0;
       }
     }
+
+    return true; // date changed — streak/clicks may have been reset
   }
+
+  return false;
 }
 
 async function persistState() {
@@ -198,8 +207,6 @@ function render() {
   updateCountdown();
 }
 
-/* --- Click Handler --- */
-
 /* --- Countdown --- */
 
 let _countdownInterval = null;
@@ -255,14 +262,13 @@ function handleClick() {
 }
 
 function openCampaignPage() {
-  const campaignUrl = "https://arab.org/click-to-help/palestine/";
   const previousText = dom.btnClick.textContent;
 
   dom.btnClick.disabled = true;
   dom.btnClick.textContent = "Opening Campaign\u2026";
 
   if (typeof chrome !== "undefined" && chrome.tabs) {
-    chrome.tabs.create({ url: campaignUrl, active: true }, () => {
+    chrome.tabs.create({ url: CAMPAIGN_URL, active: true }, () => {
       if (chrome.runtime.lastError) {
         dom.btnClick.disabled = false;
         dom.btnClick.textContent = previousText;
@@ -274,16 +280,17 @@ function openCampaignPage() {
       dom.btnClick.textContent = "Waiting for Confirmation";
       dom.btnClick.classList.add("btn-click--waiting");
 
+      // 6 s gives enough time for the campaign page to load, click, and redirect
       setTimeout(() => {
         if (state.todayClicks === 0) {
           dom.btnClick.disabled = false;
           dom.btnClick.textContent = "Click to Help Palestine";
           dom.btnClick.classList.remove("btn-click--waiting");
         }
-      }, 1200);
+      }, 6000);
     });
   } else {
-    window.open(campaignUrl, "_blank");
+    window.open(CAMPAIGN_URL, "_blank");
     dom.btnClick.disabled = false;
     dom.btnClick.textContent = previousText;
     dom.btnClick.classList.remove("btn-click--waiting");
@@ -315,11 +322,8 @@ dom.btnClick.addEventListener("click", handleClick);
 dom.toggleAutoclick.addEventListener("change", () => {
   state.autoClick = dom.toggleAutoclick.checked;
   persistState();
-  if (state.autoClick) {
-    dom.timeRangeContainer.classList.add("visible");
-  } else {
-    dom.timeRangeContainer.classList.remove("visible");
-  }
+  dom.timeRangeContainer.classList.toggle("visible", state.autoClick);
+  updateCountdown();
   notifyBackground();
 });
 
@@ -358,4 +362,10 @@ if (typeof chrome !== "undefined" && chrome.storage && chrome.storage.onChanged)
 (async function init() {
   await loadState();
   render();
+
+  // Keep the footer version badge in sync with manifest.json — avoids string drift
+  if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.getManifest) {
+    const el = document.querySelector(".footer-version");
+    if (el) el.textContent = `v${chrome.runtime.getManifest().version}`;
+  }
 })();

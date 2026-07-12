@@ -131,18 +131,22 @@ function randomDelay(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-/* --- Initialization --- */
-
-if (window.location.pathname.startsWith(THANK_YOU_PATH)) {
-  handleThankYouPage();
-} else if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", attemptClick);
-} else {
-  attemptClick();
-}
-
-/* --- Thank You Page Auto-Close --- */
+/* --- Thank You Page Handler --- */
 
 function handleThankYouPage() {
   notifyClickConfirmed();
+}
+
+/* --- Initialization --- */
+
+const CAMPAIGN_PATH = "/click-to-help/palestine/";
+
+if (window.location.pathname.startsWith(THANK_YOU_PATH)) {
+  handleThankYouPage();
+} else if (window.location.pathname.startsWith(CAMPAIGN_PATH)) {
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", attemptClick);
+  } else {
+    attemptClick();
+  }
 }
