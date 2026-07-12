@@ -111,18 +111,44 @@ function notifyClickConfirmed() {
 
 /* --- Retry Loop --- */
 
+let _observer = null;
+
 function attemptClick() {
-  if (attemptCount >= MAX_ATTEMPTS) return;
+  if (attemptCount >= MAX_ATTEMPTS) {
+    // All timed retries exhausted — watch for the button being injected later
+    watchForButton();
+    return;
+  }
 
   const button = findClickButton();
 
   if (button) {
+    stopWatching();
     performClick(button);
     return;
   }
 
   attemptCount++;
   setTimeout(attemptClick, RETRY_INTERVAL_MS);
+}
+
+function watchForButton() {
+  if (_observer || !document.body) return;
+  _observer = new MutationObserver(() => {
+    const button = findClickButton();
+    if (button) {
+      stopWatching();
+      performClick(button);
+    }
+  });
+  _observer.observe(document.body, { childList: true, subtree: true });
+}
+
+function stopWatching() {
+  if (_observer) {
+    _observer.disconnect();
+    _observer = null;
+  }
 }
 
 /* --- Utility --- */

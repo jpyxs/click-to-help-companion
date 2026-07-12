@@ -1,5 +1,6 @@
 /* --- Constants --- */
 
+// Keep in sync with background.js STORAGE_KEYS
 const STORAGE_KEYS = {
   STREAK: "streak",
   BEST_STREAK: "bestStreak",
@@ -9,7 +10,8 @@ const STORAGE_KEYS = {
   TODAY_DATE: "todayDate",
   AUTO_CLICK: "autoClick",
   TIME_RANGE: "timeRange",
-  NOTIFICATIONS: "notifications"
+  NOTIFICATIONS: "notifications",
+  LAST_REMINDER_DATE: "lastReminderDate"
 };
 
 const STREAK_CIRCUMFERENCE = 2 * Math.PI * 52;
@@ -385,6 +387,19 @@ if (typeof chrome !== "undefined" && chrome.storage && chrome.storage.onChanged)
     }
   });
 }
+
+/* --- Cleanup --- */
+
+window.addEventListener("unload", () => {
+  if (_countdownInterval) {
+    clearInterval(_countdownInterval);
+    _countdownInterval = null;
+  }
+  if (_renderDebounceTimer) {
+    clearTimeout(_renderDebounceTimer);
+    _renderDebounceTimer = null;
+  }
+});
 
 /* --- Initialization --- */
 

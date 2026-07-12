@@ -10,6 +10,7 @@ const PENDING_AUTO_CLICK_TIMEOUT_MINUTES = 5;
 const MIN_ALARM_DELAY_MINUTES = 0.1;
 const CURRENT_STORAGE_VERSION = 1;
 
+// Keep in sync with popup.js STORAGE_KEYS
 const STORAGE_KEYS = {
   STREAK: "streak",
   BEST_STREAK: "bestStreak",
@@ -50,17 +51,27 @@ chrome.runtime.onInstalled.addListener((details) => {
 function runStorageMigrations() {
   chrome.storage.local.get("storageVersion", (data) => {
     const from = data.storageVersion || 0;
+    const migrations = [];
 
     if (from < 1) {
       // v0 → v1: ensure LAST_REMINDER_DATE key exists (added in v1.1.0)
-      chrome.storage.local.get(STORAGE_KEYS.LAST_REMINDER_DATE, (existing) => {
-        if (existing[STORAGE_KEYS.LAST_REMINDER_DATE] === undefined) {
-          chrome.storage.local.set({ [STORAGE_KEYS.LAST_REMINDER_DATE]: "" });
-        }
-      });
+      migrations.push(
+        new Promise((resolve) => {
+          chrome.storage.local.get(STORAGE_KEYS.LAST_REMINDER_DATE, (existing) => {
+            if (existing[STORAGE_KEYS.LAST_REMINDER_DATE] === undefined) {
+              chrome.storage.local.set({ [STORAGE_KEYS.LAST_REMINDER_DATE]: "" }, resolve);
+            } else {
+              resolve();
+            }
+          });
+        })
+      );
     }
 
-    chrome.storage.local.set({ storageVersion: CURRENT_STORAGE_VERSION });
+    // Only bump the version after every migration write has completed
+    Promise.all(migrations).then(() => {
+      chrome.storage.local.set({ storageVersion: CURRENT_STORAGE_VERSION });
+    });
   });
 }
 
@@ -188,9 +199,12 @@ function scheduleAlarm(name, targetHour) {
 
   const delayMinutes = (target.getTime() - now.getTime()) / (1000 * 60);
 
-  chrome.alarms.create(name, {
-    delayInMinutes: delayMinutes,
-    periodInMinutes: 24 * 60
+  // Clear first to reset the period — prevents drift when settings change mid-day
+  chrome.alarms.clear(name, () => {
+    chrome.alarms.create(name, {
+      delayInMinutes: delayMinutes,
+      periodInMinutes: 24 * 60
+    });
   });
 }
 
@@ -404,7 +418,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 chrome.tabs.onRemoved.addListener((tabId) => {
   chrome.storage.local.get(PENDING_AUTO_CLICK_TAB, (data) => {
     const pendingTab = data[PENDING_AUTO_CLICK_TAB];
-    if (getPendingAutoClickTabId(pendingTab) === tabId) {
+    const pendingTabId = getPendingAutoClickTabId(pendingTab);
+
+    if (pendingTabId === tabId) {
+      // Active pending tab was closed — clean up
+      chrome.storage.local.remove(PENDING_AUTO_CLICK_TAB);
+      chrome.alarms.clear(ALARM_AUTO_CLICK_CLEANUP);
+    } else if (isExpiredPendingTab(pendingTab)) {
+      // Stale expired entry — clean it up opportunistically on any tab close
       chrome.storage.local.remove(PENDING_AUTO_CLICK_TAB);
       chrome.alarms.clear(ALARM_AUTO_CLICK_CLEANUP);
     }
@@ -518,10 +539,8 @@ function handleKeyboardClick() {
   );
 }
 
-if (typeof chrome !== "undefined" && chrome.storage && chrome.storage.onChanged) {
-  chrome.storage.onChanged.addListener((changes, areaName) => {
-    if (areaName === "local") {
-      updateBadge();
-    }
-  });
-}
+chrome.storage.onChanged.addListener((changes, areaName) => {
+  if (areaName === "local") {
+    updateBadge();
+  }
+});
