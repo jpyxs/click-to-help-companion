@@ -8,6 +8,7 @@ const REMINDER_HOUR = 18;
 const PENDING_AUTO_CLICK_TAB = "_pendingAutoClickTab";
 const PENDING_AUTO_CLICK_TIMEOUT_MINUTES = 5;
 const MIN_ALARM_DELAY_MINUTES = 0.1;
+const CURRENT_STORAGE_VERSION = 1;
 
 const STORAGE_KEYS = {
   STREAK: "streak",
@@ -27,6 +28,7 @@ const STORAGE_KEYS = {
 chrome.runtime.onInstalled.addListener((details) => {
   if (details.reason === "install") {
     chrome.storage.local.set({
+      storageVersion: CURRENT_STORAGE_VERSION,
       [STORAGE_KEYS.STREAK]: 0,
       [STORAGE_KEYS.BEST_STREAK]: 0,
       [STORAGE_KEYS.TOTAL_CLICKS]: 0,
@@ -38,10 +40,29 @@ chrome.runtime.onInstalled.addListener((details) => {
       [STORAGE_KEYS.NOTIFICATIONS]: true,
       [STORAGE_KEYS.LAST_REMINDER_DATE]: ""
     });
+  } else if (details.reason === "update") {
+    runStorageMigrations();
   }
 
   setupAlarms();
 });
+
+function runStorageMigrations() {
+  chrome.storage.local.get("storageVersion", (data) => {
+    const from = data.storageVersion || 0;
+
+    if (from < 1) {
+      // v0 → v1: ensure LAST_REMINDER_DATE key exists (added in v1.1.0)
+      chrome.storage.local.get(STORAGE_KEYS.LAST_REMINDER_DATE, (existing) => {
+        if (existing[STORAGE_KEYS.LAST_REMINDER_DATE] === undefined) {
+          chrome.storage.local.set({ [STORAGE_KEYS.LAST_REMINDER_DATE]: "" });
+        }
+      });
+    }
+
+    chrome.storage.local.set({ storageVersion: CURRENT_STORAGE_VERSION });
+  });
+}
 
 chrome.runtime.onStartup.addListener(() => {
   setupAlarms();
@@ -179,7 +200,13 @@ function handleMissedAutoClickWindow(data) {
     data[STORAGE_KEYS.TODAY_DATE] === today && data[STORAGE_KEYS.TODAY_CLICKS] > 0;
 
   if (alreadyClicked) return false;
-  if (getPendingAutoClickTabId(data[PENDING_AUTO_CLICK_TAB])) return false;
+
+  const pendingTabData = data[PENDING_AUTO_CLICK_TAB];
+  if (isExpiredPendingTab(pendingTabData)) {
+    chrome.storage.local.remove(PENDING_AUTO_CLICK_TAB); // explicit cleanup
+  } else if (getPendingAutoClickTabId(pendingTabData)) {
+    return false;
+  }
 
   const selectedWindow = getTimeRangeWindow(data[STORAGE_KEYS.TIME_RANGE] || "morning", new Date());
   if (new Date() <= selectedWindow.end) return false;
@@ -230,7 +257,13 @@ function handleAutoClick() {
       scheduleAutoClickAlarm(data[STORAGE_KEYS.TIME_RANGE] || "morning", alreadyClicked);
 
       if (alreadyClicked) return;
-      if (getPendingAutoClickTabId(data[PENDING_AUTO_CLICK_TAB])) return;
+
+      const pendingTabData = data[PENDING_AUTO_CLICK_TAB];
+      if (isExpiredPendingTab(pendingTabData)) {
+        chrome.storage.local.remove(PENDING_AUTO_CLICK_TAB); // explicit cleanup
+      } else if (getPendingAutoClickTabId(pendingTabData)) {
+        return; // valid pending tab still active
+      }
 
       openAutoClickTab();
     }
@@ -256,7 +289,7 @@ function openAutoClickTab() {
 
 function cleanupPendingAutoClickTab() {
   chrome.storage.local.get(
-    [PENDING_AUTO_CLICK_TAB, STORAGE_KEYS.AUTO_CLICK],
+    [PENDING_AUTO_CLICK_TAB, STORAGE_KEYS.AUTO_CLICK, STORAGE_KEYS.TIME_RANGE],
     (data) => {
       const pendingTab = data[PENDING_AUTO_CLICK_TAB];
       const pendingTabId = getPendingAutoClickTabId(pendingTab);
@@ -270,9 +303,16 @@ function cleanupPendingAutoClickTab() {
         chrome.alarms.clear(ALARM_AUTO_CLICK_CLEANUP);
 
         if (data[STORAGE_KEYS.AUTO_CLICK]) {
-          chrome.alarms.create(ALARM_AUTO_CLICK, {
-            delayInMinutes: 15
-          });
+          const timeRange = data[STORAGE_KEYS.TIME_RANGE] || "morning";
+          const currentWindow = getTimeRangeWindow(timeRange, new Date());
+
+          if (new Date() <= currentWindow.end) {
+            // Still within the time window — retry in 15 minutes
+            chrome.alarms.create(ALARM_AUTO_CLICK, { delayInMinutes: 15 });
+          } else {
+            // Past today's window — schedule for tomorrow's window instead
+            scheduleAutoClickAlarm(timeRange, true);
+          }
         }
       });
     }
@@ -292,18 +332,16 @@ function closePendingAutoClickTab(tabId, pendingTab) {
   });
 }
 
+function isExpiredPendingTab(pendingTab) {
+  if (!pendingTab || typeof pendingTab !== "object") return false;
+  const { createdAt } = pendingTab;
+  return !!createdAt && Date.now() - createdAt > PENDING_AUTO_CLICK_TIMEOUT_MINUTES * 60 * 1000;
+}
+
 function getPendingAutoClickTabId(pendingTab) {
   if (!pendingTab) return null;
-
-  const tabId = typeof pendingTab === "number" ? pendingTab : pendingTab.tabId;
-  const createdAt = typeof pendingTab === "object" ? pendingTab.createdAt : null;
-
-  if (createdAt && Date.now() - createdAt > PENDING_AUTO_CLICK_TIMEOUT_MINUTES * 60 * 1000) {
-    chrome.storage.local.remove(PENDING_AUTO_CLICK_TAB);
-    return null;
-  }
-
-  return tabId;
+  if (isExpiredPendingTab(pendingTab)) return null;
+  return typeof pendingTab === "number" ? pendingTab : pendingTab.tabId;
 }
 
 function handleReminder() {
@@ -442,6 +480,42 @@ function updateBadge() {
       chrome.action.setBadgeBackgroundColor({ color: "#1A1A1A" });
     }
   });
+}
+
+/* --- Keyboard Shortcut --- */
+
+chrome.commands.onCommand.addListener((command) => {
+  if (command === "trigger-click") {
+    handleKeyboardClick();
+  }
+});
+
+function handleKeyboardClick() {
+  chrome.storage.local.get(
+    [STORAGE_KEYS.TODAY_CLICKS, STORAGE_KEYS.TODAY_DATE, PENDING_AUTO_CLICK_TAB],
+    (data) => {
+      const today = getTodayString();
+      const alreadyClicked =
+        data[STORAGE_KEYS.TODAY_DATE] === today && data[STORAGE_KEYS.TODAY_CLICKS] > 0;
+
+      if (alreadyClicked) return;
+      if (getPendingAutoClickTabId(data[PENDING_AUTO_CLICK_TAB])) return;
+
+      // Keyboard-triggered: open in the foreground so the user sees it
+      chrome.tabs.create({ url: CAMPAIGN_URL, active: true }, (tab) => {
+        if (chrome.runtime.lastError || !tab?.id) return;
+        chrome.storage.local.set({
+          [PENDING_AUTO_CLICK_TAB]: {
+            tabId: tab.id,
+            createdAt: Date.now()
+          }
+        });
+        chrome.alarms.create(ALARM_AUTO_CLICK_CLEANUP, {
+          delayInMinutes: PENDING_AUTO_CLICK_TIMEOUT_MINUTES
+        });
+      });
+    }
+  );
 }
 
 if (typeof chrome !== "undefined" && chrome.storage && chrome.storage.onChanged) {

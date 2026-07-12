@@ -34,7 +34,8 @@ const dom = {
   toggleNotifications: document.getElementById("toggle-notifications"),
   streakProgress: document.querySelector(".streak-progress"),
   countdownRow: document.getElementById("countdown-row"),
-  countdownText: document.getElementById("countdown-text")
+  countdownText: document.getElementById("countdown-text"),
+  countdownLabel: document.getElementById("countdown-label-text")
 };
 
 /* --- Utility Functions --- */
@@ -169,6 +170,8 @@ function updateStreakRing() {
   });
 }
 
+let _prevClickedToday = null; // null = first render, false/true = previous state
+
 function updateStatusBar() {
   const clickedToday = state.todayClicks > 0;
 
@@ -177,17 +180,32 @@ function updateStatusBar() {
 
   if (clickedToday) {
     dom.statusBar.classList.add("completed");
-    dom.statusIcon.innerHTML = "&#10003;";
+    dom.statusBar.classList.remove("at-risk");
+
+    // Only flash on a genuine pending → completed transition, not on initial open
+    if (_prevClickedToday === false) {
+      dom.statusBar.classList.add("just-completed");
+      setTimeout(() => dom.statusBar.classList.remove("just-completed"), 750);
+    }
+
+    dom.statusIcon.innerHTML = "\u2713";
     dom.statusText.textContent = "Today's click completed!";
     dom.btnClick.disabled = true;
     dom.btnClick.textContent = "Done for Today";
   } else {
-    dom.statusBar.classList.remove("completed");
+    dom.statusBar.classList.remove("completed", "just-completed");
+    const hour = new Date().getHours();
+    const atRisk = hour >= 20; // 8 PM threshold
+    dom.statusBar.classList.toggle("at-risk", atRisk);
     dom.statusIcon.innerHTML = "!";
-    dom.statusText.textContent = "Pending until thank-you page";
+    dom.statusText.textContent = atRisk
+      ? "Streak at risk \u2014 click before midnight!"
+      : "Pending until thank-you page";
     dom.btnClick.disabled = false;
     dom.btnClick.textContent = "Click to Help Palestine";
   }
+
+  _prevClickedToday = clickedToday;
 }
 
 function render() {
@@ -212,7 +230,8 @@ function render() {
 let _countdownInterval = null;
 
 function updateCountdown() {
-  const show = state.autoClick && state.todayClicks === 0;
+  // Show countdown whenever auto-click is on — today's or tomorrow's
+  const show = state.autoClick;
 
   dom.countdownRow.classList.toggle("visible", show);
 
@@ -228,6 +247,11 @@ function updateCountdown() {
       dom.countdownText.textContent = "Scheduling\u2026";
       return;
     }
+
+    // Label reflects whether today's click is already done
+    dom.countdownLabel.textContent = state.todayClicks > 0
+      ? "Auto-click tomorrow"
+      : "Next auto-click";
 
     function tick() {
       const ms = alarm.scheduledTime - Date.now();
@@ -349,10 +373,15 @@ document.querySelectorAll(".footer-link").forEach((link) => {
   });
 });
 
+let _renderDebounceTimer = null;
+
 if (typeof chrome !== "undefined" && chrome.storage && chrome.storage.onChanged) {
   chrome.storage.onChanged.addListener((changes, areaName) => {
     if (areaName === "local") {
-      loadState().then(render);
+      clearTimeout(_renderDebounceTimer);
+      _renderDebounceTimer = setTimeout(() => {
+        loadState().then(render);
+      }, 80);
     }
   });
 }

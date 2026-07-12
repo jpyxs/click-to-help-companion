@@ -336,9 +336,28 @@ body {
   transition: background var(--transition), border-color var(--transition);
 }
 
+@keyframes status-complete-flash {
+  0%   { background: #AAEECB; border-color: #27AE60; }
+  100% { background: #E8F8EF; border-color: var(--color-success); }
+}
+
 .status-bar.completed {
   background: #E8F8EF;
   border-color: var(--color-success);
+}
+
+.status-bar.just-completed {
+  animation: status-complete-flash 0.7s ease-out;
+}
+
+.status-bar.at-risk {
+  background: #FFF3E0;
+  border-color: #E87D1A;
+}
+
+.status-bar.at-risk .status-icon {
+  background: #E87D1A;
+  animation-duration: 1.1s; /* faster pulse when streak is at risk */
 }
 
 .status-icon {
