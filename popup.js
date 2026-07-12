@@ -14,6 +14,7 @@ const STORAGE_KEYS = {
 
 const STREAK_CIRCUMFERENCE = 2 * Math.PI * 52;
 const MAX_STREAK_DISPLAY = 30;
+const ALARM_AUTO_CLICK = "daily-auto-click";
 
 /* --- DOM References --- */
 
@@ -30,7 +31,9 @@ const dom = {
   timeRangeSelect: document.getElementById("time-range-select"),
   timeRangeContainer: document.getElementById("time-range-container"),
   toggleNotifications: document.getElementById("toggle-notifications"),
-  streakProgress: document.querySelector(".streak-progress")
+  streakProgress: document.querySelector(".streak-progress"),
+  countdownRow: document.getElementById("countdown-row"),
+  countdownText: document.getElementById("countdown-text")
 };
 
 /* --- Utility Functions --- */
@@ -143,12 +146,25 @@ async function persistState() {
 
 function updateStreakRing() {
   const ratio = Math.min(state.streak / MAX_STREAK_DISPLAY, 1);
-  const offset = STREAK_CIRCUMFERENCE * (1 - ratio);
-  dom.streakProgress.style.strokeDashoffset = offset;
+  const targetOffset = STREAK_CIRCUMFERENCE * (1 - ratio);
+
+  // Reset to empty (no transition), then trigger CSS draw-in animation
+  dom.streakProgress.style.transition = "none";
+  dom.streakProgress.style.strokeDashoffset = STREAK_CIRCUMFERENCE;
+
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      dom.streakProgress.style.transition = "";
+      dom.streakProgress.style.strokeDashoffset = targetOffset;
+    });
+  });
 }
 
 function updateStatusBar() {
   const clickedToday = state.todayClicks > 0;
+
+  // Always clear the waiting shimmer when re-rendering status
+  dom.btnClick.classList.remove("btn-click--waiting");
 
   if (clickedToday) {
     dom.statusBar.classList.add("completed");
@@ -158,7 +174,7 @@ function updateStatusBar() {
     dom.btnClick.textContent = "Done for Today";
   } else {
     dom.statusBar.classList.remove("completed");
-    dom.statusIcon.innerHTML = "&#8226;";
+    dom.statusIcon.innerHTML = "!";
     dom.statusText.textContent = "Pending until thank-you page";
     dom.btnClick.disabled = false;
     dom.btnClick.textContent = "Click to Help Palestine";
@@ -179,6 +195,55 @@ function render() {
 
   updateStreakRing();
   updateStatusBar();
+  updateCountdown();
+}
+
+/* --- Click Handler --- */
+
+/* --- Countdown --- */
+
+let _countdownInterval = null;
+
+function updateCountdown() {
+  const show = state.autoClick && state.todayClicks === 0;
+
+  dom.countdownRow.classList.toggle("visible", show);
+
+  if (_countdownInterval) {
+    clearInterval(_countdownInterval);
+    _countdownInterval = null;
+  }
+
+  if (!show || typeof chrome === "undefined" || !chrome.alarms) return;
+
+  chrome.alarms.get(ALARM_AUTO_CLICK, (alarm) => {
+    if (chrome.runtime.lastError || !alarm) {
+      dom.countdownText.textContent = "Scheduling\u2026";
+      return;
+    }
+
+    function tick() {
+      const ms = alarm.scheduledTime - Date.now();
+      if (ms <= 0) {
+        dom.countdownText.textContent = "Any moment now";
+        return;
+      }
+      const h = Math.floor(ms / 3600000);
+      const m = Math.floor((ms % 3600000) / 60000);
+      const s = Math.floor((ms % 60000) / 1000);
+
+      if (h > 0) {
+        dom.countdownText.textContent = `${h}h ${m}m`;
+      } else if (m > 0) {
+        dom.countdownText.textContent = `${m}m ${s}s`;
+      } else {
+        dom.countdownText.textContent = `${s}s`;
+      }
+    }
+
+    tick();
+    _countdownInterval = setInterval(tick, 1000);
+  });
 }
 
 /* --- Click Handler --- */
@@ -194,21 +259,26 @@ function openCampaignPage() {
   const previousText = dom.btnClick.textContent;
 
   dom.btnClick.disabled = true;
-  dom.btnClick.textContent = "Opening Campaign...";
+  dom.btnClick.textContent = "Opening Campaign\u2026";
 
   if (typeof chrome !== "undefined" && chrome.tabs) {
     chrome.tabs.create({ url: campaignUrl, active: true }, () => {
       if (chrome.runtime.lastError) {
         dom.btnClick.disabled = false;
         dom.btnClick.textContent = previousText;
+        dom.btnClick.classList.remove("btn-click--waiting");
         return;
       }
 
+      // Show shimmer while waiting for thank-you page confirmation
       dom.btnClick.textContent = "Waiting for Confirmation";
+      dom.btnClick.classList.add("btn-click--waiting");
+
       setTimeout(() => {
         if (state.todayClicks === 0) {
           dom.btnClick.disabled = false;
           dom.btnClick.textContent = "Click to Help Palestine";
+          dom.btnClick.classList.remove("btn-click--waiting");
         }
       }, 1200);
     });
@@ -216,6 +286,7 @@ function openCampaignPage() {
     window.open(campaignUrl, "_blank");
     dom.btnClick.disabled = false;
     dom.btnClick.textContent = previousText;
+    dom.btnClick.classList.remove("btn-click--waiting");
   }
 }
 

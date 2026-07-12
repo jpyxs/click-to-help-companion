@@ -347,7 +347,7 @@ body {
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: var(--color-pending);
+  background: var(--color-primary);
   color: var(--color-white);
   font-size: 11px;
   font-weight: 700;
@@ -355,8 +355,18 @@ body {
   transition: background var(--transition);
 }
 
+@keyframes icon-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.75; transform: scale(0.88); }
+}
+
+.status-bar:not(.completed) .status-icon {
+  animation: icon-pulse 2.2s ease-in-out infinite;
+}
+
 .status-bar.completed .status-icon {
   background: var(--color-success);
+  animation: none;
 }
 
 .status-text {
@@ -425,6 +435,46 @@ body {
   display: flex;
   flex-direction: column;
   gap: 4px;
+}
+
+/* --- Countdown Row --- */
+
+.countdown-row {
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.countdown-row.visible {
+  display: flex;
+}
+
+.countdown-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-body);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--color-text-muted);
+}
+
+.countdown-icon {
+  width: 11px;
+  height: 11px;
+  flex-shrink: 0;
+}
+
+.countdown-value {
+  font-family: var(--font-heading);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-primary);
+  font-variant-numeric: tabular-nums;
 }
 
 .time-range-label {
@@ -543,6 +593,28 @@ body {
 .btn-click:disabled {
   background: var(--color-pending);
   cursor: default;
+  transform: none;
+}
+
+@keyframes btn-shimmer {
+  0%   { background-position: 200% center; }
+  100% { background-position: -200% center; }
+}
+
+.btn-click.btn-click--waiting,
+.btn-click.btn-click--waiting:disabled {
+  background: linear-gradient(
+    90deg,
+    var(--color-primary-dark) 0%,
+    var(--color-primary) 30%,
+    #FF8A56 50%,
+    var(--color-primary) 70%,
+    var(--color-primary-dark) 100%
+  );
+  background-size: 300% auto;
+  animation: btn-shimmer 2s linear infinite;
+  cursor: default;
+  opacity: 1;
   transform: none;
 }
 

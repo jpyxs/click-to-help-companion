@@ -438,8 +438,8 @@ function updateBadge() {
     if (clickedToday) {
       chrome.action.setBadgeText({ text: "" });
     } else {
-      chrome.action.setBadgeText({ text: "•" });
-      chrome.action.setBadgeBackgroundColor({ color: "#F4591C" });
+      chrome.action.setBadgeText({ text: "!" });
+      chrome.action.setBadgeBackgroundColor({ color: "#1A1A1A" });
     }
   });
 }
