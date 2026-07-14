@@ -17,7 +17,8 @@ export const STORAGE_KEYS = {
   NOTIFICATIONS: "notifications",
   LAST_REMINDER_DATE: "lastReminderDate",
   CUSTOM_TIME_START: "customTimeStart",
-  CUSTOM_TIME_END: "customTimeEnd"
+  CUSTOM_TIME_END: "customTimeEnd",
+  REMINDER_HOUR: "reminderHour"
 };
 
 /** Returns today's date as "YYYY-MM-DD" in the local timezone. */

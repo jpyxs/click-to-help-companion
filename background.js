@@ -4,11 +4,10 @@ import { CAMPAIGN_URL, ALARM_AUTO_CLICK, STORAGE_KEYS, getTodayString } from "./
 
 const ALARM_AUTO_CLICK_CLEANUP = "daily-auto-click-cleanup";
 const ALARM_REMINDER = "daily-reminder";
-const REMINDER_HOUR = 18;
 const PENDING_AUTO_CLICK_TAB = "_pendingAutoClickTab";
 const PENDING_AUTO_CLICK_TIMEOUT_MINUTES = 5;
 const MIN_ALARM_DELAY_MINUTES = 0.1;
-const CURRENT_STORAGE_VERSION = 1;
+const CURRENT_STORAGE_VERSION = 2;
 
 /* --- Promise Wrappers --- */
 
@@ -57,7 +56,8 @@ chrome.runtime.onInstalled.addListener(async (details) => {
       [STORAGE_KEYS.NOTIFICATIONS]: true,
       [STORAGE_KEYS.LAST_REMINDER_DATE]: "",
       [STORAGE_KEYS.CUSTOM_TIME_START]: "09:00",
-      [STORAGE_KEYS.CUSTOM_TIME_END]: "10:00"
+      [STORAGE_KEYS.CUSTOM_TIME_END]: "10:00",
+      [STORAGE_KEYS.REMINDER_HOUR]: 18
     });
   } else if (details.reason === "update") {
     await runStorageMigrations();
@@ -71,10 +71,18 @@ async function runStorageMigrations() {
   const from = storageVersion || 0;
 
   if (from < 1) {
-    // v0 → v1: ensure LAST_REMINDER_DATE key exists (added in v1.1.0)
+    // v0 → v1: LAST_REMINDER_DATE added in v1.1.0
     const existing = await storageGet(STORAGE_KEYS.LAST_REMINDER_DATE);
     if (existing[STORAGE_KEYS.LAST_REMINDER_DATE] === undefined) {
       await storageSet({ [STORAGE_KEYS.LAST_REMINDER_DATE]: "" });
+    }
+  }
+
+  if (from < 2) {
+    // v1 → v2: REMINDER_HOUR added in v1.3.0
+    const existing = await storageGet(STORAGE_KEYS.REMINDER_HOUR);
+    if (existing[STORAGE_KEYS.REMINDER_HOUR] === undefined) {
+      await storageSet({ [STORAGE_KEYS.REMINDER_HOUR]: 18 });
     }
   }
 
@@ -98,9 +106,11 @@ async function setupAlarms() {
     STORAGE_KEYS.TODAY_DATE,
     STORAGE_KEYS.CUSTOM_TIME_START,
     STORAGE_KEYS.CUSTOM_TIME_END,
+    STORAGE_KEYS.REMINDER_HOUR,
     PENDING_AUTO_CLICK_TAB
   ]);
 
+  const reminderHour = data[STORAGE_KEYS.REMINDER_HOUR] ?? 18;
   let openedCatchUpTab = false;
 
   if (data[STORAGE_KEYS.AUTO_CLICK]) {
@@ -117,9 +127,9 @@ async function setupAlarms() {
   }
 
   if (data[STORAGE_KEYS.NOTIFICATIONS]) {
-    scheduleAlarm(ALARM_REMINDER, REMINDER_HOUR);
+    scheduleAlarm(ALARM_REMINDER, reminderHour);
     if (!openedCatchUpTab) {
-      handleMissedReminder();
+      handleMissedReminder(reminderHour);
     }
   } else {
     await alarmsClear(ALARM_REMINDER);
@@ -205,7 +215,6 @@ function getCustomTimes(data) {
 }
 
 function randomDateBetween(start, end) {
-  // Use open-ended range for timestamps (no +1 bias on ms values)
   return new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
 }
 
@@ -220,8 +229,7 @@ async function scheduleAlarm(name, targetHour) {
 
   const delayMinutes = (target.getTime() - now.getTime()) / (1000 * 60);
 
-  // Clear first to reset the period — prevents drift when settings change mid-day
-  await alarmsClear(name);
+  await alarmsClear(name); // clear first to prevent drift when settings change mid-day
   chrome.alarms.create(name, {
     delayInMinutes: delayMinutes,
     periodInMinutes: 24 * 60
@@ -254,10 +262,8 @@ async function handleMissedAutoClickWindow(data) {
   return true;
 }
 
-function handleMissedReminder() {
-  const now = new Date();
-  if (now.getHours() < REMINDER_HOUR) return;
-
+function handleMissedReminder(reminderHour) {
+  if (new Date().getHours() < reminderHour) return;
   handleReminder();
 }
 
@@ -295,7 +301,7 @@ async function handleAutoClick() {
   if (isExpiredPendingTab(pendingTabData)) {
     await storageRemove(PENDING_AUTO_CLICK_TAB);
   } else if (getPendingAutoClickTabId(pendingTabData)) {
-    return; // valid pending tab still active
+    return;
   }
 
   openAutoClickTab();
@@ -330,9 +336,7 @@ async function cleanupPendingAutoClickTab() {
   const pendingTabId = getPendingAutoClickTabId(pendingTab);
   if (!pendingTabId) return;
 
-  await tabsRemove(pendingTabId).catch(() => {
-    // Tab may already be gone; pending state still needs clearing
-  });
+  await tabsRemove(pendingTabId).catch(() => {});
   await storageRemove(PENDING_AUTO_CLICK_TAB);
   await alarmsClear(ALARM_AUTO_CLICK_CLEANUP);
 
@@ -342,10 +346,8 @@ async function cleanupPendingAutoClickTab() {
     const currentWindow = getTimeRangeWindow(timeRange, new Date(), customTimes);
 
     if (new Date() <= currentWindow.end) {
-      // Still within the time window — retry in 15 minutes
       chrome.alarms.create(ALARM_AUTO_CLICK, { delayInMinutes: 15 });
     } else {
-      // Past today's window — schedule for tomorrow's window instead
       scheduleAutoClickAlarm(timeRange, true, customTimes);
     }
   }
@@ -355,9 +357,7 @@ async function closePendingAutoClickTab(tabId, pendingTab) {
   const pendingTabId = getPendingAutoClickTabId(pendingTab);
   if (!pendingTabId || tabId !== pendingTabId) return;
 
-  await tabsRemove(tabId).catch(() => {
-    // Tab may already be gone; pending state still needs clearing
-  });
+  await tabsRemove(tabId).catch(() => {});
   await storageRemove(PENDING_AUTO_CLICK_TAB);
   await alarmsClear(ALARM_AUTO_CLICK_CLEANUP);
 }
@@ -391,8 +391,7 @@ async function handleReminder() {
   if (alreadyClicked) return;
   if (data[STORAGE_KEYS.LAST_REMINDER_DATE] === today) return;
 
-  // Write the date before creating the notification so a concurrent
-  // setupAlarms() call can't fire a second reminder while this is in-flight.
+  // Write date first to prevent a concurrent setupAlarms() from firing a duplicate.
   await storageSet({ [STORAGE_KEYS.LAST_REMINDER_DATE]: today });
   chrome.notifications.create("click-reminder", {
     type: "basic",
@@ -433,12 +432,7 @@ chrome.tabs.onRemoved.addListener(async (tabId) => {
   const pendingTab = data[PENDING_AUTO_CLICK_TAB];
   const pendingTabId = getPendingAutoClickTabId(pendingTab);
 
-  if (pendingTabId === tabId) {
-    // Active pending tab was closed — clean up
-    await storageRemove(PENDING_AUTO_CLICK_TAB);
-    await alarmsClear(ALARM_AUTO_CLICK_CLEANUP);
-  } else if (isExpiredPendingTab(pendingTab)) {
-    // Stale expired entry — clean it up opportunistically on any tab close
+  if (pendingTabId === tabId || isExpiredPendingTab(pendingTab)) {
     await storageRemove(PENDING_AUTO_CLICK_TAB);
     await alarmsClear(ALARM_AUTO_CLICK_CLEANUP);
   }
@@ -528,7 +522,6 @@ async function handleKeyboardClick() {
   if (alreadyClicked) return;
   if (getPendingAutoClickTabId(data[PENDING_AUTO_CLICK_TAB])) return;
 
-  // Keyboard-triggered: open in the foreground so the user sees it
   const tab = await tabsCreate({ url: CAMPAIGN_URL, active: true });
   if (chrome.runtime.lastError || !tab?.id) return;
 

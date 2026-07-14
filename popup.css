@@ -457,6 +457,20 @@ body {
   gap: 4px;
 }
 
+/* --- Reminder Hour Selector --- */
+
+.reminder-hour-container {
+  display: none;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 0 6px;
+  animation: fadeIn 200ms ease;
+}
+
+.reminder-hour-container.visible {
+  display: flex;
+}
+
 /* --- Countdown Row --- */
 
 .countdown-row {
