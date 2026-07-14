@@ -85,13 +85,22 @@
 
         <div class="time-range-container" id="time-range-container">
           <label class="time-range-label" for="time-range-select">Random time window</label>
-          <select class="time-range-select" id="time-range-select">
-            <option value="morning">Morning (8-10 AM)</option>
-            <option value="midday">Midday (11 AM-2 PM)</option>
-            <option value="afternoon">Afternoon (3-5 PM)</option>
-            <option value="evening">Evening (6-8 PM)</option>
-            <option value="night">Night (9-11 PM)</option>
-          </select>
+        <select class="time-range-select" id="time-range-select">
+          <option value="morning">Morning (8–10 AM)</option>
+          <option value="midday">Midday (11 AM–2 PM)</option>
+          <option value="afternoon">Afternoon (3–5 PM)</option>
+          <option value="evening">Evening (6–8 PM)</option>
+          <option value="night">Night (9–11 PM)</option>
+          <option value="custom">Custom…</option>
+        </select>
+        <div class="custom-time-container" id="custom-time-container">
+          <div class="custom-time-row">
+            <label class="custom-time-label" for="custom-time-start">From</label>
+            <input class="custom-time-input" type="time" id="custom-time-start" value="09:00">
+            <label class="custom-time-label" for="custom-time-end">To</label>
+            <input class="custom-time-input" type="time" id="custom-time-end" value="10:00">
+          </div>
+          <span class="custom-time-hint" id="custom-time-hint"></span>
         </div>
 
         <div class="countdown-row" id="countdown-row">

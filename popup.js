@@ -19,6 +19,10 @@ const dom = {
   toggleAutoclick: document.getElementById("toggle-autoclick"),
   timeRangeSelect: document.getElementById("time-range-select"),
   timeRangeContainer: document.getElementById("time-range-container"),
+  customTimeContainer: document.getElementById("custom-time-container"),
+  customTimeStart: document.getElementById("custom-time-start"),
+  customTimeEnd: document.getElementById("custom-time-end"),
+  customTimeHint: document.getElementById("custom-time-hint"),
   toggleNotifications: document.getElementById("toggle-notifications"),
   streakProgress: document.querySelector(".streak-progress"),
   countdownRow: document.getElementById("countdown-row"),
@@ -73,7 +77,9 @@ const state = {
   lastClickDate: "",
   autoClick: false,
   timeRange: "morning",
-  notifications: true
+  notifications: true,
+  customTimeStart: "09:00",
+  customTimeEnd: "10:00"
 };
 
 async function loadState() {
@@ -90,6 +96,8 @@ async function loadState() {
   state.notifications = data[STORAGE_KEYS.NOTIFICATIONS] !== undefined
     ? data[STORAGE_KEYS.NOTIFICATIONS]
     : true;
+  state.customTimeStart = data[STORAGE_KEYS.CUSTOM_TIME_START] || "09:00";
+  state.customTimeEnd = data[STORAGE_KEYS.CUSTOM_TIME_END] || "10:00";
 
   const dateChanged = reconcileDate();
   if (dateChanged) {
@@ -132,7 +140,9 @@ async function persistState() {
     [STORAGE_KEYS.TODAY_DATE]: state.todayDate,
     [STORAGE_KEYS.AUTO_CLICK]: state.autoClick,
     [STORAGE_KEYS.TIME_RANGE]: state.timeRange,
-    [STORAGE_KEYS.NOTIFICATIONS]: state.notifications
+    [STORAGE_KEYS.NOTIFICATIONS]: state.notifications,
+    [STORAGE_KEYS.CUSTOM_TIME_START]: state.customTimeStart,
+    [STORAGE_KEYS.CUSTOM_TIME_END]: state.customTimeEnd
   });
 }
 
@@ -203,6 +213,11 @@ function render() {
   dom.toggleNotifications.checked = state.notifications;
 
   dom.timeRangeContainer.classList.toggle("visible", state.autoClick);
+
+  // Sync custom time inputs from state
+  dom.customTimeStart.value = state.customTimeStart;
+  dom.customTimeEnd.value = state.customTimeEnd;
+  updateCustomTimeVisibility();
 
   updateStreakRing();
   updateStatusBar();
@@ -337,9 +352,41 @@ dom.toggleAutoclick.addEventListener("change", () => {
 
 dom.timeRangeSelect.addEventListener("change", () => {
   state.timeRange = dom.timeRangeSelect.value;
+  updateCustomTimeVisibility();
   persistState();
   notifyBackground();
 });
+
+/** Shows/hides the custom time inputs depending on the selected time range. */
+function updateCustomTimeVisibility() {
+  const isCustom = state.timeRange === "custom";
+  dom.customTimeContainer.classList.toggle("visible", isCustom);
+  if (isCustom) validateCustomTimes();
+  else dom.customTimeHint.textContent = "";
+}
+
+/** Returns true when the input is valid and saves; shows a hint otherwise. */
+function validateCustomTimes() {
+  const start = dom.customTimeStart.value;
+  const end = dom.customTimeEnd.value;
+  const valid = start && end && start < end;
+
+  dom.customTimeStart.classList.toggle("invalid", !valid);
+  dom.customTimeEnd.classList.toggle("invalid", !valid);
+  dom.customTimeHint.textContent = valid ? "" : "End time must be after start time.";
+  return valid;
+}
+
+async function saveCustomTimes() {
+  if (!validateCustomTimes()) return;
+  state.customTimeStart = dom.customTimeStart.value;
+  state.customTimeEnd = dom.customTimeEnd.value;
+  await persistState();
+  notifyBackground();
+}
+
+dom.customTimeStart.addEventListener("change", saveCustomTimes);
+dom.customTimeEnd.addEventListener("change", saveCustomTimes);
 
 dom.toggleNotifications.addEventListener("change", () => {
   handleToggle("notifications", dom.toggleNotifications);

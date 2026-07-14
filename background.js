@@ -55,7 +55,9 @@ chrome.runtime.onInstalled.addListener(async (details) => {
       [STORAGE_KEYS.AUTO_CLICK]: false,
       [STORAGE_KEYS.TIME_RANGE]: "morning",
       [STORAGE_KEYS.NOTIFICATIONS]: true,
-      [STORAGE_KEYS.LAST_REMINDER_DATE]: ""
+      [STORAGE_KEYS.LAST_REMINDER_DATE]: "",
+      [STORAGE_KEYS.CUSTOM_TIME_START]: "09:00",
+      [STORAGE_KEYS.CUSTOM_TIME_END]: "10:00"
     });
   } else if (details.reason === "update") {
     await runStorageMigrations();
@@ -94,6 +96,8 @@ async function setupAlarms() {
     STORAGE_KEYS.NOTIFICATIONS,
     STORAGE_KEYS.TODAY_CLICKS,
     STORAGE_KEYS.TODAY_DATE,
+    STORAGE_KEYS.CUSTOM_TIME_START,
+    STORAGE_KEYS.CUSTOM_TIME_END,
     PENDING_AUTO_CLICK_TAB
   ]);
 
@@ -103,7 +107,8 @@ async function setupAlarms() {
     const today = getTodayString();
     const alreadyClicked =
       data[STORAGE_KEYS.TODAY_DATE] === today && data[STORAGE_KEYS.TODAY_CLICKS] > 0;
-    scheduleAutoClickAlarm(data[STORAGE_KEYS.TIME_RANGE] || "morning", alreadyClicked);
+    const customTimes = getCustomTimes(data);
+    scheduleAutoClickAlarm(data[STORAGE_KEYS.TIME_RANGE] || "morning", alreadyClicked, customTimes);
     openedCatchUpTab = await handleMissedAutoClickWindow(data);
   } else {
     await alarmsClear(ALARM_AUTO_CLICK);
@@ -121,9 +126,9 @@ async function setupAlarms() {
   }
 }
 
-function scheduleAutoClickAlarm(timeRange, alreadyClicked = false) {
+function scheduleAutoClickAlarm(timeRange, alreadyClicked = false, customTimes = null) {
   const now = new Date();
-  const target = getNextAutoClickTarget(timeRange, now, alreadyClicked);
+  const target = getNextAutoClickTarget(timeRange, now, alreadyClicked, customTimes);
   const delayMinutes = Math.max(
     (target.getTime() - now.getTime()) / (1000 * 60),
     MIN_ALARM_DELAY_MINUTES
@@ -132,15 +137,15 @@ function scheduleAutoClickAlarm(timeRange, alreadyClicked = false) {
   chrome.alarms.create(ALARM_AUTO_CLICK, { delayInMinutes: delayMinutes });
 }
 
-function getNextAutoClickTarget(timeRange, now, alreadyClicked = false) {
-  const todayWindow = getTimeRangeWindow(timeRange, now);
+function getNextAutoClickTarget(timeRange, now, alreadyClicked = false, customTimes = null) {
+  const todayWindow = getTimeRangeWindow(timeRange, now, customTimes);
   let start = todayWindow.start;
   let end = todayWindow.end;
 
   if (alreadyClicked || now > end) {
     const tomorrow = new Date(now);
     tomorrow.setDate(tomorrow.getDate() + 1);
-    const tomorrowWindow = getTimeRangeWindow(timeRange, tomorrow);
+    const tomorrowWindow = getTimeRangeWindow(timeRange, tomorrow, customTimes);
     start = tomorrowWindow.start;
     end = tomorrowWindow.end;
   } else if (now > start) {
@@ -150,7 +155,7 @@ function getNextAutoClickTarget(timeRange, now, alreadyClicked = false) {
   if (start > end) {
     const tomorrow = new Date(now);
     tomorrow.setDate(tomorrow.getDate() + 1);
-    const tomorrowWindow = getTimeRangeWindow(timeRange, tomorrow);
+    const tomorrowWindow = getTimeRangeWindow(timeRange, tomorrow, customTimes);
     start = tomorrowWindow.start;
     end = tomorrowWindow.end;
   }
@@ -158,13 +163,24 @@ function getNextAutoClickTarget(timeRange, now, alreadyClicked = false) {
   return randomDateBetween(start, end);
 }
 
-function getTimeRangeWindow(timeRange, date) {
-  const { minHour, maxHour } = getTimeRangeHours(timeRange);
+/**
+ * Returns a { start, end } window for the given date.
+ * customTimes = { start: "HH:MM", end: "HH:MM" } — used when timeRange is "custom".
+ */
+function getTimeRangeWindow(timeRange, date, customTimes = null) {
+  let minHour, minMinute = 0, maxHour, maxMinute = 59;
+
+  if (timeRange === "custom" && customTimes?.start && customTimes?.end) {
+    [minHour, minMinute] = customTimes.start.split(":").map(Number);
+    [maxHour, maxMinute] = customTimes.end.split(":").map(Number);
+  } else {
+    ({ minHour, maxHour } = getTimeRangeHours(timeRange));
+  }
+
   const start = new Date(date);
   const end = new Date(date);
-
-  start.setHours(minHour, 0, 0, 0);
-  end.setHours(maxHour, 59, 59, 999);
+  start.setHours(minHour, minMinute, 0, 0);
+  end.setHours(maxHour, maxMinute, 59, 999);
 
   return { start, end };
 }
@@ -178,6 +194,14 @@ function getTimeRangeHours(timeRange) {
     case "night":     return { minHour: 21, maxHour: 23 };
     default:          return { minHour: 8,  maxHour: 10 };
   }
+}
+
+/** Extracts custom time strings from a storage data object. */
+function getCustomTimes(data) {
+  return {
+    start: data[STORAGE_KEYS.CUSTOM_TIME_START] || "09:00",
+    end: data[STORAGE_KEYS.CUSTOM_TIME_END] || "10:00"
+  };
 }
 
 function randomDateBetween(start, end) {
@@ -218,7 +242,12 @@ async function handleMissedAutoClickWindow(data) {
     return false;
   }
 
-  const selectedWindow = getTimeRangeWindow(data[STORAGE_KEYS.TIME_RANGE] || "morning", new Date());
+  const customTimes = getCustomTimes(data);
+  const selectedWindow = getTimeRangeWindow(
+    data[STORAGE_KEYS.TIME_RANGE] || "morning",
+    new Date(),
+    customTimes
+  );
   if (new Date() <= selectedWindow.end) return false;
 
   openAutoClickTab();
@@ -246,6 +275,8 @@ async function handleAutoClick() {
     STORAGE_KEYS.TIME_RANGE,
     STORAGE_KEYS.TODAY_CLICKS,
     STORAGE_KEYS.TODAY_DATE,
+    STORAGE_KEYS.CUSTOM_TIME_START,
+    STORAGE_KEYS.CUSTOM_TIME_END,
     PENDING_AUTO_CLICK_TAB
   ]);
 
@@ -255,7 +286,8 @@ async function handleAutoClick() {
   const alreadyClicked =
     data[STORAGE_KEYS.TODAY_DATE] === today && data[STORAGE_KEYS.TODAY_CLICKS] > 0;
 
-  scheduleAutoClickAlarm(data[STORAGE_KEYS.TIME_RANGE] || "morning", alreadyClicked);
+  const customTimes = getCustomTimes(data);
+  scheduleAutoClickAlarm(data[STORAGE_KEYS.TIME_RANGE] || "morning", alreadyClicked, customTimes);
 
   if (alreadyClicked) return;
 
@@ -289,7 +321,9 @@ async function cleanupPendingAutoClickTab() {
   const data = await storageGet([
     PENDING_AUTO_CLICK_TAB,
     STORAGE_KEYS.AUTO_CLICK,
-    STORAGE_KEYS.TIME_RANGE
+    STORAGE_KEYS.TIME_RANGE,
+    STORAGE_KEYS.CUSTOM_TIME_START,
+    STORAGE_KEYS.CUSTOM_TIME_END
   ]);
 
   const pendingTab = data[PENDING_AUTO_CLICK_TAB];
@@ -304,14 +338,15 @@ async function cleanupPendingAutoClickTab() {
 
   if (data[STORAGE_KEYS.AUTO_CLICK]) {
     const timeRange = data[STORAGE_KEYS.TIME_RANGE] || "morning";
-    const currentWindow = getTimeRangeWindow(timeRange, new Date());
+    const customTimes = getCustomTimes(data);
+    const currentWindow = getTimeRangeWindow(timeRange, new Date(), customTimes);
 
     if (new Date() <= currentWindow.end) {
       // Still within the time window — retry in 15 minutes
       chrome.alarms.create(ALARM_AUTO_CLICK, { delayInMinutes: 15 });
     } else {
       // Past today's window — schedule for tomorrow's window instead
-      scheduleAutoClickAlarm(timeRange, true);
+      scheduleAutoClickAlarm(timeRange, true, customTimes);
     }
   }
 }
