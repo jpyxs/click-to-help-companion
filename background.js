@@ -1,7 +1,7 @@
+import { CAMPAIGN_URL, ALARM_AUTO_CLICK, STORAGE_KEYS, getTodayString } from "./shared.js";
+
 /* --- Constants --- */
 
-const CAMPAIGN_URL = "https://arab.org/click-to-help/palestine/";
-const ALARM_AUTO_CLICK = "daily-auto-click";
 const ALARM_AUTO_CLICK_CLEANUP = "daily-auto-click-cleanup";
 const ALARM_REMINDER = "daily-reminder";
 const REMINDER_HOUR = 18;
@@ -10,25 +10,41 @@ const PENDING_AUTO_CLICK_TIMEOUT_MINUTES = 5;
 const MIN_ALARM_DELAY_MINUTES = 0.1;
 const CURRENT_STORAGE_VERSION = 1;
 
-// Keep in sync with popup.js STORAGE_KEYS
-const STORAGE_KEYS = {
-  STREAK: "streak",
-  BEST_STREAK: "bestStreak",
-  TOTAL_CLICKS: "totalClicks",
-  LAST_CLICK_DATE: "lastClickDate",
-  TODAY_CLICKS: "todayClicks",
-  TODAY_DATE: "todayDate",
-  AUTO_CLICK: "autoClick",
-  TIME_RANGE: "timeRange",
-  NOTIFICATIONS: "notifications",
-  LAST_REMINDER_DATE: "lastReminderDate"
-};
+/* --- Promise Wrappers --- */
+
+function storageGet(keys) {
+  return new Promise((resolve) => chrome.storage.local.get(keys, resolve));
+}
+
+function storageSet(data) {
+  return new Promise((resolve) => chrome.storage.local.set(data, resolve));
+}
+
+function storageRemove(keys) {
+  return new Promise((resolve) => chrome.storage.local.remove(keys, resolve));
+}
+
+function alarmsClear(name) {
+  return new Promise((resolve) => chrome.alarms.clear(name, resolve));
+}
+
+function alarmsGet(name) {
+  return new Promise((resolve) => chrome.alarms.get(name, resolve));
+}
+
+function tabsCreate(props) {
+  return new Promise((resolve) => chrome.tabs.create(props, resolve));
+}
+
+function tabsRemove(tabId) {
+  return new Promise((resolve) => chrome.tabs.remove(tabId, resolve));
+}
 
 /* --- Lifecycle Events --- */
 
-chrome.runtime.onInstalled.addListener((details) => {
+chrome.runtime.onInstalled.addListener(async (details) => {
   if (details.reason === "install") {
-    chrome.storage.local.set({
+    await storageSet({
       storageVersion: CURRENT_STORAGE_VERSION,
       [STORAGE_KEYS.STREAK]: 0,
       [STORAGE_KEYS.BEST_STREAK]: 0,
@@ -42,37 +58,25 @@ chrome.runtime.onInstalled.addListener((details) => {
       [STORAGE_KEYS.LAST_REMINDER_DATE]: ""
     });
   } else if (details.reason === "update") {
-    runStorageMigrations();
+    await runStorageMigrations();
   }
 
   setupAlarms();
 });
 
-function runStorageMigrations() {
-  chrome.storage.local.get("storageVersion", (data) => {
-    const from = data.storageVersion || 0;
-    const migrations = [];
+async function runStorageMigrations() {
+  const { storageVersion } = await storageGet("storageVersion");
+  const from = storageVersion || 0;
 
-    if (from < 1) {
-      // v0 → v1: ensure LAST_REMINDER_DATE key exists (added in v1.1.0)
-      migrations.push(
-        new Promise((resolve) => {
-          chrome.storage.local.get(STORAGE_KEYS.LAST_REMINDER_DATE, (existing) => {
-            if (existing[STORAGE_KEYS.LAST_REMINDER_DATE] === undefined) {
-              chrome.storage.local.set({ [STORAGE_KEYS.LAST_REMINDER_DATE]: "" }, resolve);
-            } else {
-              resolve();
-            }
-          });
-        })
-      );
+  if (from < 1) {
+    // v0 → v1: ensure LAST_REMINDER_DATE key exists (added in v1.1.0)
+    const existing = await storageGet(STORAGE_KEYS.LAST_REMINDER_DATE);
+    if (existing[STORAGE_KEYS.LAST_REMINDER_DATE] === undefined) {
+      await storageSet({ [STORAGE_KEYS.LAST_REMINDER_DATE]: "" });
     }
+  }
 
-    // Only bump the version after every migration write has completed
-    Promise.all(migrations).then(() => {
-      chrome.storage.local.set({ storageVersion: CURRENT_STORAGE_VERSION });
-    });
-  });
+  await storageSet({ storageVersion: CURRENT_STORAGE_VERSION });
 }
 
 chrome.runtime.onStartup.addListener(() => {
@@ -81,42 +85,40 @@ chrome.runtime.onStartup.addListener(() => {
 
 /* --- Alarm Management --- */
 
-function setupAlarms() {
+async function setupAlarms() {
   updateBadge();
-  chrome.storage.local.get(
-    [
-      STORAGE_KEYS.AUTO_CLICK,
-      STORAGE_KEYS.TIME_RANGE,
-      STORAGE_KEYS.NOTIFICATIONS,
-      STORAGE_KEYS.TODAY_CLICKS,
-      STORAGE_KEYS.TODAY_DATE,
-      PENDING_AUTO_CLICK_TAB
-    ],
-    (data) => {
-      let openedCatchUpTab = false;
 
-      if (data[STORAGE_KEYS.AUTO_CLICK]) {
-        const today = getTodayString();
-        const alreadyClicked =
-          data[STORAGE_KEYS.TODAY_DATE] === today && data[STORAGE_KEYS.TODAY_CLICKS] > 0;
-        scheduleAutoClickAlarm(data[STORAGE_KEYS.TIME_RANGE] || "morning", alreadyClicked);
-        openedCatchUpTab = handleMissedAutoClickWindow(data);
-      } else {
-        chrome.alarms.clear(ALARM_AUTO_CLICK);
-        chrome.alarms.clear(ALARM_AUTO_CLICK_CLEANUP);
-        chrome.storage.local.remove(PENDING_AUTO_CLICK_TAB);
-      }
+  const data = await storageGet([
+    STORAGE_KEYS.AUTO_CLICK,
+    STORAGE_KEYS.TIME_RANGE,
+    STORAGE_KEYS.NOTIFICATIONS,
+    STORAGE_KEYS.TODAY_CLICKS,
+    STORAGE_KEYS.TODAY_DATE,
+    PENDING_AUTO_CLICK_TAB
+  ]);
 
-      if (data[STORAGE_KEYS.NOTIFICATIONS]) {
-        scheduleAlarm(ALARM_REMINDER, REMINDER_HOUR);
-        if (!openedCatchUpTab) {
-          handleMissedReminder();
-        }
-      } else {
-        chrome.alarms.clear(ALARM_REMINDER);
-      }
+  let openedCatchUpTab = false;
+
+  if (data[STORAGE_KEYS.AUTO_CLICK]) {
+    const today = getTodayString();
+    const alreadyClicked =
+      data[STORAGE_KEYS.TODAY_DATE] === today && data[STORAGE_KEYS.TODAY_CLICKS] > 0;
+    scheduleAutoClickAlarm(data[STORAGE_KEYS.TIME_RANGE] || "morning", alreadyClicked);
+    openedCatchUpTab = await handleMissedAutoClickWindow(data);
+  } else {
+    await alarmsClear(ALARM_AUTO_CLICK);
+    await alarmsClear(ALARM_AUTO_CLICK_CLEANUP);
+    await storageRemove(PENDING_AUTO_CLICK_TAB);
+  }
+
+  if (data[STORAGE_KEYS.NOTIFICATIONS]) {
+    scheduleAlarm(ALARM_REMINDER, REMINDER_HOUR);
+    if (!openedCatchUpTab) {
+      handleMissedReminder();
     }
-  );
+  } else {
+    await alarmsClear(ALARM_REMINDER);
+  }
 }
 
 function scheduleAutoClickAlarm(timeRange, alreadyClicked = false) {
@@ -127,9 +129,7 @@ function scheduleAutoClickAlarm(timeRange, alreadyClicked = false) {
     MIN_ALARM_DELAY_MINUTES
   );
 
-  chrome.alarms.create(ALARM_AUTO_CLICK, {
-    delayInMinutes: delayMinutes
-  });
+  chrome.alarms.create(ALARM_AUTO_CLICK, { delayInMinutes: delayMinutes });
 }
 
 function getNextAutoClickTarget(timeRange, now, alreadyClicked = false) {
@@ -171,24 +171,21 @@ function getTimeRangeWindow(timeRange, date) {
 
 function getTimeRangeHours(timeRange) {
   switch (timeRange) {
-    case "morning": return { minHour: 8, maxHour: 10 };
-    case "midday": return { minHour: 11, maxHour: 14 };
+    case "morning":   return { minHour: 8,  maxHour: 10 };
+    case "midday":    return { minHour: 11, maxHour: 14 };
     case "afternoon": return { minHour: 15, maxHour: 17 };
-    case "evening": return { minHour: 18, maxHour: 20 };
-    case "night": return { minHour: 21, maxHour: 23 };
-    default: return { minHour: 8, maxHour: 10 };
+    case "evening":   return { minHour: 18, maxHour: 20 };
+    case "night":     return { minHour: 21, maxHour: 23 };
+    default:          return { minHour: 8,  maxHour: 10 };
   }
 }
 
 function randomDateBetween(start, end) {
-  return new Date(randomInt(start.getTime(), end.getTime()));
+  // Use open-ended range for timestamps (no +1 bias on ms values)
+  return new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
 }
 
-function randomInt(min, max) {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
-}
-
-function scheduleAlarm(name, targetHour) {
+async function scheduleAlarm(name, targetHour) {
   const now = new Date();
   const target = new Date();
   target.setHours(targetHour, 0, 0, 0);
@@ -200,15 +197,14 @@ function scheduleAlarm(name, targetHour) {
   const delayMinutes = (target.getTime() - now.getTime()) / (1000 * 60);
 
   // Clear first to reset the period — prevents drift when settings change mid-day
-  chrome.alarms.clear(name, () => {
-    chrome.alarms.create(name, {
-      delayInMinutes: delayMinutes,
-      periodInMinutes: 24 * 60
-    });
+  await alarmsClear(name);
+  chrome.alarms.create(name, {
+    delayInMinutes: delayMinutes,
+    periodInMinutes: 24 * 60
   });
 }
 
-function handleMissedAutoClickWindow(data) {
+async function handleMissedAutoClickWindow(data) {
   const today = getTodayString();
   const alreadyClicked =
     data[STORAGE_KEYS.TODAY_DATE] === today && data[STORAGE_KEYS.TODAY_CLICKS] > 0;
@@ -217,7 +213,7 @@ function handleMissedAutoClickWindow(data) {
 
   const pendingTabData = data[PENDING_AUTO_CLICK_TAB];
   if (isExpiredPendingTab(pendingTabData)) {
-    chrome.storage.local.remove(PENDING_AUTO_CLICK_TAB); // explicit cleanup
+    await storageRemove(PENDING_AUTO_CLICK_TAB);
   } else if (getPendingAutoClickTabId(pendingTabData)) {
     return false;
   }
@@ -239,111 +235,96 @@ function handleMissedReminder() {
 /* --- Alarm Handlers --- */
 
 chrome.alarms.onAlarm.addListener((alarm) => {
-  if (alarm.name === ALARM_AUTO_CLICK) {
-    handleAutoClick();
-  }
-
-  if (alarm.name === ALARM_AUTO_CLICK_CLEANUP) {
-    cleanupPendingAutoClickTab();
-  }
-
-  if (alarm.name === ALARM_REMINDER) {
-    handleReminder();
-  }
+  if (alarm.name === ALARM_AUTO_CLICK)         handleAutoClick();
+  if (alarm.name === ALARM_AUTO_CLICK_CLEANUP) cleanupPendingAutoClickTab();
+  if (alarm.name === ALARM_REMINDER)           handleReminder();
 });
 
-function handleAutoClick() {
-  chrome.storage.local.get(
-    [
-      STORAGE_KEYS.AUTO_CLICK,
-      STORAGE_KEYS.TIME_RANGE,
-      STORAGE_KEYS.TODAY_CLICKS,
-      STORAGE_KEYS.TODAY_DATE,
-      PENDING_AUTO_CLICK_TAB
-    ],
-    (data) => {
-      if (!data[STORAGE_KEYS.AUTO_CLICK]) return;
+async function handleAutoClick() {
+  const data = await storageGet([
+    STORAGE_KEYS.AUTO_CLICK,
+    STORAGE_KEYS.TIME_RANGE,
+    STORAGE_KEYS.TODAY_CLICKS,
+    STORAGE_KEYS.TODAY_DATE,
+    PENDING_AUTO_CLICK_TAB
+  ]);
 
-      const today = getTodayString();
-      const alreadyClicked =
-        data[STORAGE_KEYS.TODAY_DATE] === today && data[STORAGE_KEYS.TODAY_CLICKS] > 0;
+  if (!data[STORAGE_KEYS.AUTO_CLICK]) return;
 
-      scheduleAutoClickAlarm(data[STORAGE_KEYS.TIME_RANGE] || "morning", alreadyClicked);
+  const today = getTodayString();
+  const alreadyClicked =
+    data[STORAGE_KEYS.TODAY_DATE] === today && data[STORAGE_KEYS.TODAY_CLICKS] > 0;
 
-      if (alreadyClicked) return;
+  scheduleAutoClickAlarm(data[STORAGE_KEYS.TIME_RANGE] || "morning", alreadyClicked);
 
-      const pendingTabData = data[PENDING_AUTO_CLICK_TAB];
-      if (isExpiredPendingTab(pendingTabData)) {
-        chrome.storage.local.remove(PENDING_AUTO_CLICK_TAB); // explicit cleanup
-      } else if (getPendingAutoClickTabId(pendingTabData)) {
-        return; // valid pending tab still active
-      }
+  if (alreadyClicked) return;
 
-      openAutoClickTab();
-    }
-  );
+  const pendingTabData = data[PENDING_AUTO_CLICK_TAB];
+  if (isExpiredPendingTab(pendingTabData)) {
+    await storageRemove(PENDING_AUTO_CLICK_TAB);
+  } else if (getPendingAutoClickTabId(pendingTabData)) {
+    return; // valid pending tab still active
+  }
+
+  openAutoClickTab();
 }
 
-function openAutoClickTab() {
-  chrome.tabs.create({ url: CAMPAIGN_URL, active: false }, (tab) => {
-    if (chrome.runtime.lastError || !tab?.id) return;
+async function openAutoClickTab() {
+  const tab = await tabsCreate({ url: CAMPAIGN_URL, active: false });
+  if (chrome.runtime.lastError || !tab?.id) return;
 
-    chrome.storage.local.set({
-      [PENDING_AUTO_CLICK_TAB]: {
-        tabId: tab.id,
-        createdAt: Date.now()
-      }
-    });
+  await storageSet({
+    [PENDING_AUTO_CLICK_TAB]: {
+      tabId: tab.id,
+      createdAt: Date.now()
+    }
+  });
 
-    chrome.alarms.create(ALARM_AUTO_CLICK_CLEANUP, {
-      delayInMinutes: PENDING_AUTO_CLICK_TIMEOUT_MINUTES
-    });
+  chrome.alarms.create(ALARM_AUTO_CLICK_CLEANUP, {
+    delayInMinutes: PENDING_AUTO_CLICK_TIMEOUT_MINUTES
   });
 }
 
-function cleanupPendingAutoClickTab() {
-  chrome.storage.local.get(
-    [PENDING_AUTO_CLICK_TAB, STORAGE_KEYS.AUTO_CLICK, STORAGE_KEYS.TIME_RANGE],
-    (data) => {
-      const pendingTab = data[PENDING_AUTO_CLICK_TAB];
-      const pendingTabId = getPendingAutoClickTabId(pendingTab);
-      if (!pendingTabId) return;
+async function cleanupPendingAutoClickTab() {
+  const data = await storageGet([
+    PENDING_AUTO_CLICK_TAB,
+    STORAGE_KEYS.AUTO_CLICK,
+    STORAGE_KEYS.TIME_RANGE
+  ]);
 
-      chrome.tabs.remove(pendingTabId, () => {
-        if (chrome.runtime.lastError) {
-          // The tab may already be gone; the pending state should still be cleared.
-        }
-        chrome.storage.local.remove(PENDING_AUTO_CLICK_TAB);
-        chrome.alarms.clear(ALARM_AUTO_CLICK_CLEANUP);
+  const pendingTab = data[PENDING_AUTO_CLICK_TAB];
+  const pendingTabId = getPendingAutoClickTabId(pendingTab);
+  if (!pendingTabId) return;
 
-        if (data[STORAGE_KEYS.AUTO_CLICK]) {
-          const timeRange = data[STORAGE_KEYS.TIME_RANGE] || "morning";
-          const currentWindow = getTimeRangeWindow(timeRange, new Date());
+  await tabsRemove(pendingTabId).catch(() => {
+    // Tab may already be gone; pending state still needs clearing
+  });
+  await storageRemove(PENDING_AUTO_CLICK_TAB);
+  await alarmsClear(ALARM_AUTO_CLICK_CLEANUP);
 
-          if (new Date() <= currentWindow.end) {
-            // Still within the time window — retry in 15 minutes
-            chrome.alarms.create(ALARM_AUTO_CLICK, { delayInMinutes: 15 });
-          } else {
-            // Past today's window — schedule for tomorrow's window instead
-            scheduleAutoClickAlarm(timeRange, true);
-          }
-        }
-      });
+  if (data[STORAGE_KEYS.AUTO_CLICK]) {
+    const timeRange = data[STORAGE_KEYS.TIME_RANGE] || "morning";
+    const currentWindow = getTimeRangeWindow(timeRange, new Date());
+
+    if (new Date() <= currentWindow.end) {
+      // Still within the time window — retry in 15 minutes
+      chrome.alarms.create(ALARM_AUTO_CLICK, { delayInMinutes: 15 });
+    } else {
+      // Past today's window — schedule for tomorrow's window instead
+      scheduleAutoClickAlarm(timeRange, true);
     }
-  );
+  }
 }
 
-function closePendingAutoClickTab(tabId, pendingTab) {
+async function closePendingAutoClickTab(tabId, pendingTab) {
   const pendingTabId = getPendingAutoClickTabId(pendingTab);
   if (!pendingTabId || tabId !== pendingTabId) return;
 
-  chrome.tabs.remove(tabId, () => {
-    if (chrome.runtime.lastError) {
-      // The tab may already be gone; the pending state should still be cleared.
-    }
-    chrome.storage.local.remove(PENDING_AUTO_CLICK_TAB);
-    chrome.alarms.clear(ALARM_AUTO_CLICK_CLEANUP);
+  await tabsRemove(tabId).catch(() => {
+    // Tab may already be gone; pending state still needs clearing
   });
+  await storageRemove(PENDING_AUTO_CLICK_TAB);
+  await alarmsClear(ALARM_AUTO_CLICK_CLEANUP);
 }
 
 function isExpiredPendingTab(pendingTab) {
@@ -358,36 +339,33 @@ function getPendingAutoClickTabId(pendingTab) {
   return typeof pendingTab === "number" ? pendingTab : pendingTab.tabId;
 }
 
-function handleReminder() {
-  chrome.storage.local.get(
-    [
-      STORAGE_KEYS.NOTIFICATIONS,
-      STORAGE_KEYS.TODAY_CLICKS,
-      STORAGE_KEYS.TODAY_DATE,
-      STORAGE_KEYS.LAST_REMINDER_DATE
-    ],
-    (data) => {
-      if (!data[STORAGE_KEYS.NOTIFICATIONS]) return;
+async function handleReminder() {
+  const data = await storageGet([
+    STORAGE_KEYS.NOTIFICATIONS,
+    STORAGE_KEYS.TODAY_CLICKS,
+    STORAGE_KEYS.TODAY_DATE,
+    STORAGE_KEYS.LAST_REMINDER_DATE
+  ]);
 
-      const today = getTodayString();
-      const alreadyClicked =
-        data[STORAGE_KEYS.TODAY_DATE] === today && data[STORAGE_KEYS.TODAY_CLICKS] > 0;
+  if (!data[STORAGE_KEYS.NOTIFICATIONS]) return;
 
-      if (alreadyClicked) return;
-      if (data[STORAGE_KEYS.LAST_REMINDER_DATE] === today) return;
+  const today = getTodayString();
+  const alreadyClicked =
+    data[STORAGE_KEYS.TODAY_DATE] === today && data[STORAGE_KEYS.TODAY_CLICKS] > 0;
 
-      // Write the date before creating the notification so a concurrent
-      // setupAlarms() call can't fire a second reminder while this is in-flight.
-      chrome.storage.local.set({ [STORAGE_KEYS.LAST_REMINDER_DATE]: today });
-      chrome.notifications.create("click-reminder", {
-        type: "basic",
-        iconUrl: "icons/icon-128.png",
-        title: "Click to Help Palestine",
-        message: "You haven't clicked today. Keep your streak alive!",
-        priority: 2
-      });
-    }
-  );
+  if (alreadyClicked) return;
+  if (data[STORAGE_KEYS.LAST_REMINDER_DATE] === today) return;
+
+  // Write the date before creating the notification so a concurrent
+  // setupAlarms() call can't fire a second reminder while this is in-flight.
+  await storageSet({ [STORAGE_KEYS.LAST_REMINDER_DATE]: today });
+  chrome.notifications.create("click-reminder", {
+    type: "basic",
+    iconUrl: "icons/icon-128.png",
+    title: "Click to Help Palestine",
+    message: "You haven't clicked today. Keep your streak alive!",
+    priority: 2
+  });
 }
 
 /* --- Notification Click --- */
@@ -415,92 +393,82 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   return true;
 });
 
-chrome.tabs.onRemoved.addListener((tabId) => {
-  chrome.storage.local.get(PENDING_AUTO_CLICK_TAB, (data) => {
-    const pendingTab = data[PENDING_AUTO_CLICK_TAB];
-    const pendingTabId = getPendingAutoClickTabId(pendingTab);
+chrome.tabs.onRemoved.addListener(async (tabId) => {
+  const data = await storageGet(PENDING_AUTO_CLICK_TAB);
+  const pendingTab = data[PENDING_AUTO_CLICK_TAB];
+  const pendingTabId = getPendingAutoClickTabId(pendingTab);
 
-    if (pendingTabId === tabId) {
-      // Active pending tab was closed — clean up
-      chrome.storage.local.remove(PENDING_AUTO_CLICK_TAB);
-      chrome.alarms.clear(ALARM_AUTO_CLICK_CLEANUP);
-    } else if (isExpiredPendingTab(pendingTab)) {
-      // Stale expired entry — clean it up opportunistically on any tab close
-      chrome.storage.local.remove(PENDING_AUTO_CLICK_TAB);
-      chrome.alarms.clear(ALARM_AUTO_CLICK_CLEANUP);
-    }
-  });
+  if (pendingTabId === tabId) {
+    // Active pending tab was closed — clean up
+    await storageRemove(PENDING_AUTO_CLICK_TAB);
+    await alarmsClear(ALARM_AUTO_CLICK_CLEANUP);
+  } else if (isExpiredPendingTab(pendingTab)) {
+    // Stale expired entry — clean it up opportunistically on any tab close
+    await storageRemove(PENDING_AUTO_CLICK_TAB);
+    await alarmsClear(ALARM_AUTO_CLICK_CLEANUP);
+  }
 });
 
 /* --- Click Recording --- */
 
-function recordClick(tabId) {
-  chrome.storage.local.get([...Object.values(STORAGE_KEYS), PENDING_AUTO_CLICK_TAB], (data) => {
-    const today = getTodayString();
-    const todayClicks = data[STORAGE_KEYS.TODAY_CLICKS] || 0;
-    const pendingTab = data[PENDING_AUTO_CLICK_TAB];
+async function recordClick(tabId) {
+  const data = await storageGet([...Object.values(STORAGE_KEYS), PENDING_AUTO_CLICK_TAB]);
+  const today = getTodayString();
+  const todayClicks = data[STORAGE_KEYS.TODAY_CLICKS] || 0;
+  const pendingTab = data[PENDING_AUTO_CLICK_TAB];
 
-    if (data[STORAGE_KEYS.TODAY_DATE] === today && todayClicks > 0) {
-      closePendingAutoClickTab(tabId, pendingTab);
-      return;
-    }
+  if (data[STORAGE_KEYS.TODAY_DATE] === today && todayClicks > 0) {
+    closePendingAutoClickTab(tabId, pendingTab);
+    return;
+  }
 
-    let streak = data[STORAGE_KEYS.STREAK] || 0;
-    const lastClickDate = data[STORAGE_KEYS.LAST_CLICK_DATE] || "";
+  let streak = data[STORAGE_KEYS.STREAK] || 0;
+  const lastClickDate = data[STORAGE_KEYS.LAST_CLICK_DATE] || "";
 
-    if (lastClickDate) {
-      const lastDate = new Date(lastClickDate);
-      const todayDate = new Date(today);
-      const diffDays = Math.floor(
-        (todayDate.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24)
-      );
-
-      if (diffDays > 1) {
-        streak = 0;
-      }
-    }
-
-    streak += 1;
-
-    const bestStreak = Math.max(streak, data[STORAGE_KEYS.BEST_STREAK] || 0);
-    const totalClicks = (data[STORAGE_KEYS.TOTAL_CLICKS] || 0) + 1;
-
-    chrome.storage.local.set(
-      {
-        [STORAGE_KEYS.STREAK]: streak,
-        [STORAGE_KEYS.BEST_STREAK]: bestStreak,
-        [STORAGE_KEYS.TOTAL_CLICKS]: totalClicks,
-        [STORAGE_KEYS.TODAY_CLICKS]: 1,
-        [STORAGE_KEYS.TODAY_DATE]: today,
-        [STORAGE_KEYS.LAST_CLICK_DATE]: today
-      },
-      () => {
-        closePendingAutoClickTab(tabId, pendingTab);
-        setupAlarms();
-      }
+  if (lastClickDate) {
+    const lastDate = new Date(lastClickDate);
+    const todayDate = new Date(today);
+    const diffDays = Math.floor(
+      (todayDate.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24)
     );
-  });
-}
 
-/* --- Utility --- */
-
-function getTodayString() {
-  return new Date().toLocaleDateString("en-CA");
-}
-
-function updateBadge() {
-  chrome.storage.local.get([STORAGE_KEYS.TODAY_CLICKS, STORAGE_KEYS.TODAY_DATE], (data) => {
-    const today = getTodayString();
-    const clickedToday =
-      data[STORAGE_KEYS.TODAY_DATE] === today && data[STORAGE_KEYS.TODAY_CLICKS] > 0;
-
-    if (clickedToday) {
-      chrome.action.setBadgeText({ text: "" });
-    } else {
-      chrome.action.setBadgeText({ text: "!" });
-      chrome.action.setBadgeBackgroundColor({ color: "#1A1A1A" });
+    if (diffDays > 1) {
+      streak = 0;
     }
+  }
+
+  streak += 1;
+
+  const bestStreak = Math.max(streak, data[STORAGE_KEYS.BEST_STREAK] || 0);
+  const totalClicks = (data[STORAGE_KEYS.TOTAL_CLICKS] || 0) + 1;
+
+  await storageSet({
+    [STORAGE_KEYS.STREAK]: streak,
+    [STORAGE_KEYS.BEST_STREAK]: bestStreak,
+    [STORAGE_KEYS.TOTAL_CLICKS]: totalClicks,
+    [STORAGE_KEYS.TODAY_CLICKS]: 1,
+    [STORAGE_KEYS.TODAY_DATE]: today,
+    [STORAGE_KEYS.LAST_CLICK_DATE]: today
   });
+
+  closePendingAutoClickTab(tabId, pendingTab);
+  setupAlarms();
+}
+
+/* --- Badge --- */
+
+async function updateBadge() {
+  const data = await storageGet([STORAGE_KEYS.TODAY_CLICKS, STORAGE_KEYS.TODAY_DATE]);
+  const today = getTodayString();
+  const clickedToday =
+    data[STORAGE_KEYS.TODAY_DATE] === today && data[STORAGE_KEYS.TODAY_CLICKS] > 0;
+
+  if (clickedToday) {
+    chrome.action.setBadgeText({ text: "" });
+  } else {
+    chrome.action.setBadgeText({ text: "!" });
+    chrome.action.setBadgeBackgroundColor({ color: "#1A1A1A" });
+  }
 }
 
 /* --- Keyboard Shortcut --- */
@@ -511,32 +479,33 @@ chrome.commands.onCommand.addListener((command) => {
   }
 });
 
-function handleKeyboardClick() {
-  chrome.storage.local.get(
-    [STORAGE_KEYS.TODAY_CLICKS, STORAGE_KEYS.TODAY_DATE, PENDING_AUTO_CLICK_TAB],
-    (data) => {
-      const today = getTodayString();
-      const alreadyClicked =
-        data[STORAGE_KEYS.TODAY_DATE] === today && data[STORAGE_KEYS.TODAY_CLICKS] > 0;
+async function handleKeyboardClick() {
+  const data = await storageGet([
+    STORAGE_KEYS.TODAY_CLICKS,
+    STORAGE_KEYS.TODAY_DATE,
+    PENDING_AUTO_CLICK_TAB
+  ]);
 
-      if (alreadyClicked) return;
-      if (getPendingAutoClickTabId(data[PENDING_AUTO_CLICK_TAB])) return;
+  const today = getTodayString();
+  const alreadyClicked =
+    data[STORAGE_KEYS.TODAY_DATE] === today && data[STORAGE_KEYS.TODAY_CLICKS] > 0;
 
-      // Keyboard-triggered: open in the foreground so the user sees it
-      chrome.tabs.create({ url: CAMPAIGN_URL, active: true }, (tab) => {
-        if (chrome.runtime.lastError || !tab?.id) return;
-        chrome.storage.local.set({
-          [PENDING_AUTO_CLICK_TAB]: {
-            tabId: tab.id,
-            createdAt: Date.now()
-          }
-        });
-        chrome.alarms.create(ALARM_AUTO_CLICK_CLEANUP, {
-          delayInMinutes: PENDING_AUTO_CLICK_TIMEOUT_MINUTES
-        });
-      });
+  if (alreadyClicked) return;
+  if (getPendingAutoClickTabId(data[PENDING_AUTO_CLICK_TAB])) return;
+
+  // Keyboard-triggered: open in the foreground so the user sees it
+  const tab = await tabsCreate({ url: CAMPAIGN_URL, active: true });
+  if (chrome.runtime.lastError || !tab?.id) return;
+
+  await storageSet({
+    [PENDING_AUTO_CLICK_TAB]: {
+      tabId: tab.id,
+      createdAt: Date.now()
     }
-  );
+  });
+  chrome.alarms.create(ALARM_AUTO_CLICK_CLEANUP, {
+    delayInMinutes: PENDING_AUTO_CLICK_TIMEOUT_MINUTES
+  });
 }
 
 chrome.storage.onChanged.addListener((changes, areaName) => {

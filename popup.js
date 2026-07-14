@@ -1,23 +1,9 @@
-/* --- Constants --- */
+import { CAMPAIGN_URL, ALARM_AUTO_CLICK, STORAGE_KEYS, getTodayString } from "./shared.js";
 
-// Keep in sync with background.js STORAGE_KEYS
-const STORAGE_KEYS = {
-  STREAK: "streak",
-  BEST_STREAK: "bestStreak",
-  TOTAL_CLICKS: "totalClicks",
-  LAST_CLICK_DATE: "lastClickDate",
-  TODAY_CLICKS: "todayClicks",
-  TODAY_DATE: "todayDate",
-  AUTO_CLICK: "autoClick",
-  TIME_RANGE: "timeRange",
-  NOTIFICATIONS: "notifications",
-  LAST_REMINDER_DATE: "lastReminderDate"
-};
+/* --- Constants --- */
 
 const STREAK_CIRCUMFERENCE = 2 * Math.PI * 52;
 const MAX_STREAK_DISPLAY = 30;
-const ALARM_AUTO_CLICK = "daily-auto-click";
-const CAMPAIGN_URL = "https://arab.org/click-to-help/palestine/";
 
 /* --- DOM References --- */
 
@@ -41,10 +27,6 @@ const dom = {
 };
 
 /* --- Utility Functions --- */
-
-function getTodayString() {
-  return new Date().toLocaleDateString("en-CA");
-}
 
 function loadStorage(keys) {
   return new Promise((resolve) => {
