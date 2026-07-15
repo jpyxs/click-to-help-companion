@@ -7,7 +7,7 @@ const ALARM_REMINDER = "daily-reminder";
 const PENDING_AUTO_CLICK_TAB = "_pendingAutoClickTab";
 const PENDING_AUTO_CLICK_TIMEOUT_MINUTES = 5;
 const MIN_ALARM_DELAY_MINUTES = 0.1;
-const CURRENT_STORAGE_VERSION = 2;
+const CURRENT_STORAGE_VERSION = 3;
 
 /* --- Promise Wrappers --- */
 
@@ -57,7 +57,9 @@ chrome.runtime.onInstalled.addListener(async (details) => {
       [STORAGE_KEYS.LAST_REMINDER_DATE]: "",
       [STORAGE_KEYS.CUSTOM_TIME_START]: "09:00",
       [STORAGE_KEYS.CUSTOM_TIME_END]: "10:00",
-      [STORAGE_KEYS.REMINDER_HOUR]: 18
+      [STORAGE_KEYS.REMINDER_HOUR]: 18,
+      [STORAGE_KEYS.WEEK_CLICKS]: 0,
+      [STORAGE_KEYS.WEEK_START_DATE]: ""
     });
   } else if (details.reason === "update") {
     await runStorageMigrations();
@@ -84,6 +86,15 @@ async function runStorageMigrations() {
     if (existing[STORAGE_KEYS.REMINDER_HOUR] === undefined) {
       await storageSet({ [STORAGE_KEYS.REMINDER_HOUR]: 18 });
     }
+  }
+
+  if (from < 3) {
+    // v2 → v3: WEEK_CLICKS + WEEK_START_DATE added in v1.3.0
+    const existing = await storageGet([STORAGE_KEYS.WEEK_CLICKS, STORAGE_KEYS.WEEK_START_DATE]);
+    const updates = {};
+    if (existing[STORAGE_KEYS.WEEK_CLICKS] === undefined) updates[STORAGE_KEYS.WEEK_CLICKS] = 0;
+    if (existing[STORAGE_KEYS.WEEK_START_DATE] === undefined) updates[STORAGE_KEYS.WEEK_START_DATE] = "";
+    if (Object.keys(updates).length) await storageSet(updates);
   }
 
   await storageSet({ storageVersion: CURRENT_STORAGE_VERSION });
@@ -440,6 +451,17 @@ chrome.tabs.onRemoved.addListener(async (tabId) => {
 
 /* --- Click Recording --- */
 
+/**
+ * Returns the ISO week start (Monday) date string "YYYY-MM-DD" for a given date string.
+ */
+function getWeekStartDate(dateStr) {
+  const d = new Date(dateStr);
+  const day = d.getDay(); // 0=Sun … 6=Sat
+  const diff = (day === 0 ? -6 : 1) - day; // shift to Monday
+  d.setDate(d.getDate() + diff);
+  return d.toLocaleDateString("en-CA");
+}
+
 async function recordClick(tabId) {
   const data = await storageGet([...Object.values(STORAGE_KEYS), PENDING_AUTO_CLICK_TAB]);
   const today = getTodayString();
@@ -471,13 +493,22 @@ async function recordClick(tabId) {
   const bestStreak = Math.max(streak, data[STORAGE_KEYS.BEST_STREAK] || 0);
   const totalClicks = (data[STORAGE_KEYS.TOTAL_CLICKS] || 0) + 1;
 
+  // --- Week click tracking ---
+  const currentWeekStart = getWeekStartDate(today);
+  const storedWeekStart = data[STORAGE_KEYS.WEEK_START_DATE] || "";
+  const weekClicks = storedWeekStart === currentWeekStart
+    ? (data[STORAGE_KEYS.WEEK_CLICKS] || 0) + 1
+    : 1; // new week — reset to 1
+
   await storageSet({
     [STORAGE_KEYS.STREAK]: streak,
     [STORAGE_KEYS.BEST_STREAK]: bestStreak,
     [STORAGE_KEYS.TOTAL_CLICKS]: totalClicks,
     [STORAGE_KEYS.TODAY_CLICKS]: 1,
     [STORAGE_KEYS.TODAY_DATE]: today,
-    [STORAGE_KEYS.LAST_CLICK_DATE]: today
+    [STORAGE_KEYS.LAST_CLICK_DATE]: today,
+    [STORAGE_KEYS.WEEK_CLICKS]: weekClicks,
+    [STORAGE_KEYS.WEEK_START_DATE]: currentWeekStart
   });
 
   closePendingAutoClickTab(tabId, pendingTab);

@@ -53,8 +53,8 @@
           <span class="stat-label">Total Clicks</span>
         </div>
         <div class="stat-card">
-          <span class="stat-value" id="today-clicks">0</span>
-          <span class="stat-label">Today</span>
+          <span class="stat-value" id="week-clicks">0</span>
+          <span class="stat-label">This Week</span>
         </div>
         <div class="stat-card">
           <span class="stat-value" id="best-streak">0</span>
@@ -72,87 +72,96 @@
       <section class="settings">
         <h3 class="settings-title">Settings</h3>
 
-        <div class="setting-row">
-          <div class="setting-info">
-            <span class="setting-name">Auto-Click Daily</span>
-            <span class="setting-desc" id="auto-click-desc">Click automatically within your active hours</span>
+        <div class="settings-group">
+          <div class="setting-row">
+            <div class="setting-info">
+              <span class="setting-name">Auto-Click Daily</span>
+              <span class="setting-desc" id="auto-click-desc">Click automatically within your active hours</span>
+            </div>
+            <label class="toggle" for="toggle-autoclick">
+              <input type="checkbox" id="toggle-autoclick" aria-describedby="auto-click-desc">
+              <span class="toggle-slider"></span>
+            </label>
           </div>
-          <label class="toggle" for="toggle-autoclick">
-            <input type="checkbox" id="toggle-autoclick" aria-describedby="auto-click-desc">
-            <span class="toggle-slider"></span>
-          </label>
-        </div>
 
-        <div class="time-range-container" id="time-range-container">
-          <label class="time-range-label" for="time-range-select">Random time window</label>
-        <select class="time-range-select" id="time-range-select">
-          <option value="morning">Morning (8–10 AM)</option>
-          <option value="midday">Midday (11 AM–2 PM)</option>
-          <option value="afternoon">Afternoon (3–5 PM)</option>
-          <option value="evening">Evening (6–8 PM)</option>
-          <option value="night">Night (9–11 PM)</option>
-          <option value="custom">Custom…</option>
-        </select>
-        <div class="custom-time-container" id="custom-time-container">
-          <div class="custom-time-row">
-            <label class="custom-time-label" for="custom-time-start">From</label>
-            <input class="custom-time-input" type="time" id="custom-time-start" value="09:00">
-            <label class="custom-time-label" for="custom-time-end">To</label>
-            <input class="custom-time-input" type="time" id="custom-time-end" value="10:00">
-          </div>
-          <span class="custom-time-hint" id="custom-time-hint"></span>
-        </div>
-
-        <div class="countdown-row" id="countdown-row">
-          <span class="countdown-label">
-            <svg class="countdown-icon" viewBox="0 0 16 16" aria-hidden="true">
-              <circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.3"/>
-              <path d="M8 4.5v3.75l2.5 1.5" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
-            </svg>
-            <span id="countdown-label-text">Next auto-click</span>
-          </span>
-          <span class="countdown-value" id="countdown-text">—</span>
-        </div>
-
-        <div class="setting-row">
-          <div class="setting-info">
-            <span class="setting-name">Notifications</span>
-            <span class="setting-desc" id="notifications-desc">Remind me if I haven't clicked</span>
-          </div>
-          <label class="toggle" for="toggle-notifications">
-            <input type="checkbox" id="toggle-notifications" checked aria-describedby="notifications-desc">
-            <span class="toggle-slider"></span>
-          </label>
-        </div>
-
-        <div class="reminder-hour-container" id="reminder-hour-container">
-          <label class="time-range-label" for="reminder-hour-select">Reminder time</label>
-          <select class="time-range-select" id="reminder-hour-select">
-            <option value="6">6 AM</option>
-            <option value="7">7 AM</option>
-            <option value="8">8 AM</option>
-            <option value="9">9 AM</option>
-            <option value="10">10 AM</option>
-            <option value="11">11 AM</option>
-            <option value="12">12 PM</option>
-            <option value="13">1 PM</option>
-            <option value="14">2 PM</option>
-            <option value="15">3 PM</option>
-            <option value="16">4 PM</option>
-            <option value="17">5 PM</option>
-            <option value="18">6 PM</option>
-            <option value="19">7 PM</option>
-            <option value="20">8 PM</option>
-            <option value="21">9 PM</option>
-            <option value="22">10 PM</option>
-            <option value="23">11 PM</option>
+          <div class="time-range-container" id="time-range-container">
+            <label class="time-range-label" for="time-range-select">Random time window</label>
+          <select class="time-range-select" id="time-range-select">
+            <option value="morning">Morning (8–10 AM)</option>
+            <option value="midday">Midday (11 AM–2 PM)</option>
+            <option value="afternoon">Afternoon (3–5 PM)</option>
+            <option value="evening">Evening (6–8 PM)</option>
+            <option value="night">Night (9–11 PM)</option>
+            <option value="custom">Custom…</option>
           </select>
+          <div class="custom-time-container" id="custom-time-container">
+            <div class="custom-time-row">
+              <label class="custom-time-label" for="custom-time-start">From</label>
+              <input class="custom-time-input" type="time" id="custom-time-start" value="09:00">
+              <label class="custom-time-label" for="custom-time-end">To</label>
+              <input class="custom-time-input" type="time" id="custom-time-end" value="10:00">
+            </div>
+            <span class="custom-time-hint" id="custom-time-hint"></span>
+          </div>
+
+          <div class="countdown-row" id="countdown-row">
+            <span class="countdown-label">
+              <svg class="countdown-icon" viewBox="0 0 16 16" aria-hidden="true">
+                <circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.3"/>
+                <path d="M8 4.5v3.75l2.5 1.5" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+              </svg>
+              <span id="countdown-label-text">Next auto-click</span>
+            </span>
+            <span class="countdown-value" id="countdown-text">—</span>
+          </div>
+          </div>
+        </div>
+
+        <div class="settings-group">
+          <div class="setting-row">
+            <div class="setting-info">
+              <span class="setting-name">Notifications</span>
+              <span class="setting-desc" id="notifications-desc">Remind me if I haven't clicked</span>
+            </div>
+            <label class="toggle" for="toggle-notifications">
+              <input type="checkbox" id="toggle-notifications" checked aria-describedby="notifications-desc">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+
+          <div class="reminder-hour-container" id="reminder-hour-container">
+            <label class="time-range-label" for="reminder-hour-select">Reminder time</label>
+            <select class="time-range-select" id="reminder-hour-select">
+              <option value="6">6 AM</option>
+              <option value="7">7 AM</option>
+              <option value="8">8 AM</option>
+              <option value="9">9 AM</option>
+              <option value="10">10 AM</option>
+              <option value="11">11 AM</option>
+              <option value="12">12 PM</option>
+              <option value="13">1 PM</option>
+              <option value="14">2 PM</option>
+              <option value="15">3 PM</option>
+              <option value="16">4 PM</option>
+              <option value="17">5 PM</option>
+              <option value="18">6 PM</option>
+              <option value="19">7 PM</option>
+              <option value="20">8 PM</option>
+              <option value="21">9 PM</option>
+              <option value="22">10 PM</option>
+              <option value="23">11 PM</option>
+            </select>
+          </div>
         </div>
       </section>
 
       <!-- Action Button -->
       <section class="action-section">
         <button class="btn-click" id="btn-click">Click to Help Palestine</button>
+        <p class="shortcut-hint">
+          <kbd>Alt</kbd><span class="shortcut-plus">+</span><kbd>Shift</kbd><span class="shortcut-plus">+</span><kbd>C</kbd>
+          triggers this from anywhere
+        </p>
       </section>
 
       <!-- Footer -->

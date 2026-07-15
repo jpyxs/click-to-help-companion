@@ -10,7 +10,7 @@ const MAX_STREAK_DISPLAY = 30;
 const dom = {
   streakCount: document.getElementById("streak-count"),
   totalClicks: document.getElementById("total-clicks"),
-  todayClicks: document.getElementById("today-clicks"),
+  weekClicks: document.getElementById("week-clicks"),
   bestStreak: document.getElementById("best-streak"),
   statusBar: document.getElementById("status-bar"),
   statusIcon: document.getElementById("status-icon"),
@@ -82,7 +82,9 @@ const state = {
   notifications: true,
   customTimeStart: "09:00",
   customTimeEnd: "10:00",
-  reminderHour: 18
+  reminderHour: 18,
+  weekClicks: 0,
+  weekStartDate: ""
 };
 
 async function loadState() {
@@ -102,6 +104,8 @@ async function loadState() {
   state.customTimeStart = data[STORAGE_KEYS.CUSTOM_TIME_START] || "09:00";
   state.customTimeEnd = data[STORAGE_KEYS.CUSTOM_TIME_END] || "10:00";
   state.reminderHour = data[STORAGE_KEYS.REMINDER_HOUR] ?? 18;
+  state.weekClicks = data[STORAGE_KEYS.WEEK_CLICKS] || 0;
+  state.weekStartDate = data[STORAGE_KEYS.WEEK_START_DATE] || "";
 
   const dateChanged = reconcileDate();
   if (dateChanged) {
@@ -147,8 +151,33 @@ async function persistState() {
     [STORAGE_KEYS.NOTIFICATIONS]: state.notifications,
     [STORAGE_KEYS.CUSTOM_TIME_START]: state.customTimeStart,
     [STORAGE_KEYS.CUSTOM_TIME_END]: state.customTimeEnd,
-    [STORAGE_KEYS.REMINDER_HOUR]: state.reminderHour
+    [STORAGE_KEYS.REMINDER_HOUR]: state.reminderHour,
+    [STORAGE_KEYS.WEEK_CLICKS]: state.weekClicks,
+    [STORAGE_KEYS.WEEK_START_DATE]: state.weekStartDate
   });
+}
+
+/* --- At-Risk Countdown --- */
+
+let _atRiskInterval = null;
+
+function clearAtRiskCountdown() {
+  if (_atRiskInterval) {
+    clearInterval(_atRiskInterval);
+    _atRiskInterval = null;
+  }
+}
+
+/** Returns "Xh Ym left" or "Xm left" string counting down to midnight. */
+function getMidnightCountdown() {
+  const now = new Date();
+  const midnight = new Date(now);
+  midnight.setHours(24, 0, 0, 0);
+  const ms = midnight.getTime() - now.getTime();
+  const h = Math.floor(ms / 3600000);
+  const m = Math.floor((ms % 3600000) / 60000);
+  if (h > 0) return `${h}h ${m}m left`;
+  return `${m}m left`;
 }
 
 /* --- Rendering --- */
@@ -167,6 +196,9 @@ function updateStreakRing() {
       dom.streakProgress.style.strokeDashoffset = targetOffset;
     });
   });
+
+  // Gold milestone ring at 30+ day streaks
+  dom.streakProgress.classList.toggle("milestone", state.streak >= MAX_STREAK_DISPLAY);
 }
 
 let _prevClickedToday = null; // null = first render, false/true = previous state
@@ -180,6 +212,7 @@ function updateStatusBar() {
   if (clickedToday) {
     dom.statusBar.classList.add("completed");
     dom.statusBar.classList.remove("at-risk");
+    clearAtRiskCountdown();
 
     // Only flash on a genuine pending → completed transition, not on initial open
     if (_prevClickedToday === false) {
@@ -196,9 +229,19 @@ function updateStatusBar() {
     const atRisk = new Date().getHours() >= state.reminderHour;
     dom.statusBar.classList.toggle("at-risk", atRisk);
     dom.statusIcon.innerHTML = "!";
-    dom.statusText.textContent = atRisk
-      ? "Streak at risk \u2014 click before midnight!"
-      : "Pending until thank-you page";
+
+    if (atRisk) {
+      clearAtRiskCountdown();
+      const updateAtRiskText = () => {
+        dom.statusText.textContent = `Streak at risk \u2014 ${getMidnightCountdown()}`;
+      };
+      updateAtRiskText();
+      _atRiskInterval = setInterval(updateAtRiskText, 60000);
+    } else {
+      clearAtRiskCountdown();
+      dom.statusText.textContent = "Pending until thank-you page";
+    }
+
     dom.btnClick.disabled = false;
     dom.btnClick.textContent = "Click to Help Palestine";
   }
@@ -209,7 +252,7 @@ function updateStatusBar() {
 function render() {
   dom.streakCount.textContent = state.streak;
   dom.totalClicks.textContent = state.totalClicks;
-  dom.todayClicks.textContent = state.todayClicks;
+  dom.weekClicks.textContent = state.weekClicks;
   dom.bestStreak.textContent = state.bestStreak;
 
   dom.toggleAutoclick.checked = state.autoClick;
@@ -440,6 +483,7 @@ window.addEventListener("unload", () => {
     clearTimeout(_renderDebounceTimer);
     _renderDebounceTimer = null;
   }
+  clearAtRiskCountdown();
 });
 
 /* --- Initialization --- */

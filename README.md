@@ -12,10 +12,13 @@ The extension only counts a click after the campaign reaches the thank-you page.
 
 - **Toolbar access** - Open the Palestine campaign page from the extension popup.
 - **Confirmed click tracking** - Stats update only after the thank-you page loads.
-- **Daily streaks** - See your current streak, best streak, total clicks, and today's status.
+- **Daily streaks** - See your current streak, best streak, this week's clicks, and today's status.
+- **Streak milestone ring** - The ring turns gold when your streak reaches 30 days.
 - **Optional auto-click** - Choose a daily time window and let the extension open the campaign in the background.
 - **Same-day catch-up** - If your browser was closed during your chosen window, the extension can try again when you open it later that day.
-- **Reminder notifications** - Get an evening reminder if today's click has not been confirmed.
+- **Reminder notifications** - Get a reminder at your chosen time if today's click has not been confirmed.
+- **At-risk countdown** - When the reminder hour passes without a click, the status bar shows a live countdown to midnight.
+- **Keyboard shortcut** - Press `Alt+Shift+C` from anywhere in the browser to trigger the campaign tab without opening the popup.
 
 ## Preview
 
@@ -36,15 +39,17 @@ If the icon does not show up, click the puzzle piece icon in the toolbar and pin
 
 ## How to use it
 
-Open the extension from your toolbar. The popup shows your streak, total clicks, today's status, and your settings.
+Open the extension from your toolbar. The popup shows your streak, total clicks, this week's clicks, today's status, and your settings.
 
 To click manually, press **Click to Help Palestine**. The campaign page opens, and the extension will try to complete the click on the page. Your stats update only if the page reaches the thank-you screen.
+
+You can also press `Alt+Shift+C` from anywhere in the browser. This opens the campaign tab directly without needing to open the popup first.
 
 To use auto-click, turn on **Auto-Click Daily** and choose a time window. The extension schedules one daily attempt within that window. If today's click has already been confirmed, it skips the attempt.
 
 If your browser was closed during that window, the extension checks when it starts again. When the window has already passed and today's click is still unconfirmed, it opens a same-day catch-up attempt instead of silently waiting until tomorrow.
 
-To use reminders, leave **Notifications** enabled. If no click has been confirmed by evening, your browser will show a reminder the next time it is able to.
+To use reminders, leave **Notifications** enabled and choose your reminder time. If no click has been confirmed by that time, your browser will show a reminder. Once the reminder time passes, the popup status bar switches to an at-risk countdown showing how long you have until midnight.
 
 ## How confirmation works
 
@@ -69,9 +74,15 @@ Browser alarms only run while the browser can run extensions. If the browser is 
 
 ## Streaks and storage
 
-Your streak increases by 1 for each calendar day with a confirmed click. If more than one day passes between confirmed clicks, the streak resets. The ring in the popup fills over 30 days.
+Your streak increases by 1 for each calendar day with a confirmed click. If more than one day passes between confirmed clicks, the streak resets. The ring in the popup fills over 30 days and turns gold once you hit that milestone.
+
+The **This Week** stat shows how many confirmed clicks you have made in the current calendar week (Monday–Sunday). It resets automatically each week.
 
 All streaks, settings, and click counts are stored in `chrome.storage.local` on your browser. The extension does not use an external account or send your stats to a server.
+
+## Keyboard shortcut
+
+The default shortcut is `Alt+Shift+C`. You can customise it at `chrome://extensions/shortcuts` (or the equivalent page for your browser).
 
 ## Permissions
 
@@ -92,6 +103,7 @@ The extension is intentionally plain: no build step, no framework, and no remote
 - `popup.html`, `popup.css`, and `popup.js` for the toolbar popup
 - `background.js` for alarms, reminders, and confirmed click recording
 - `content.js` for the Arab.org campaign page interaction
+- `shared.js` for constants shared between the background and popup
 
 This project is not affiliated with or endorsed by Arab.org.
 
