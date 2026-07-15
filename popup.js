@@ -4,6 +4,7 @@ import { CAMPAIGN_URL, ALARM_AUTO_CLICK, STORAGE_KEYS, getTodayString } from "./
 
 const STREAK_CIRCUMFERENCE = 2 * Math.PI * 52;
 const MAX_STREAK_DISPLAY = 30;
+const MILESTONE_STREAKS = new Set([7, 14, 30]);
 
 /* --- DOM References --- */
 
@@ -179,6 +180,28 @@ function getMidnightCountdown() {
   return `${m}m left`;
 }
 
+/* --- Milestone Celebration --- */
+
+function showMilestoneCelebration(streak) {
+  const toast = document.getElementById("milestone-toast");
+  const ringEl = dom.streakProgress.closest(".streak-ring");
+
+  if (toast) {
+    const emoji = streak >= 30 ? "\uD83C\uDF1F" : "\uD83D\uDD25";
+    toast.textContent = `${emoji} ${streak}-Day Streak!`;
+    toast.classList.remove("visible");
+    void toast.offsetWidth;
+    toast.classList.add("visible");
+    setTimeout(() => toast.classList.remove("visible"), 2800);
+  }
+
+  if (ringEl) {
+    ringEl.style.setProperty("--milestone-glow", streak >= 30 ? "#F5A623" : "var(--color-primary)");
+    ringEl.classList.add("milestone-glow");
+    setTimeout(() => ringEl.classList.remove("milestone-glow"), 1100);
+  }
+}
+
 /* --- Rendering --- */
 
 function updateStreakRing() {
@@ -215,6 +238,9 @@ function updateStatusBar() {
     if (_prevClickedToday === false) {
       dom.statusBar.classList.add("just-completed");
       setTimeout(() => dom.statusBar.classList.remove("just-completed"), 750);
+      if (MILESTONE_STREAKS.has(state.streak)) {
+        showMilestoneCelebration(state.streak);
+      }
     }
 
     dom.statusIcon.innerHTML = "\u2713";
