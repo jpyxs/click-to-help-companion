@@ -114,12 +114,6 @@ function notifyClickConfirmed() {
 let _observer = null;
 
 function attemptClick() {
-  if (attemptCount >= MAX_ATTEMPTS) {
-    // All timed retries exhausted — watch for the button being injected later
-    watchForButton();
-    return;
-  }
-
   const button = findClickButton();
 
   if (button) {
@@ -129,6 +123,12 @@ function attemptClick() {
   }
 
   attemptCount++;
+
+  if (attemptCount >= MAX_ATTEMPTS) {
+    watchForButton();
+    return;
+  }
+
   setTimeout(attemptClick, RETRY_INTERVAL_MS);
 }
 
@@ -157,18 +157,12 @@ function randomDelay(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-/* --- Thank You Page Handler --- */
-
-function handleThankYouPage() {
-  notifyClickConfirmed();
-}
-
 /* --- Initialization --- */
 
 const CAMPAIGN_PATH = "/click-to-help/palestine/";
 
 if (window.location.pathname.startsWith(THANK_YOU_PATH)) {
-  handleThankYouPage();
+  notifyClickConfirmed();
 } else if (window.location.pathname.startsWith(CAMPAIGN_PATH)) {
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", attemptClick);
