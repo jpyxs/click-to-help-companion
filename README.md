@@ -91,10 +91,6 @@ The default shortcut is `Alt+Shift+C`. You can customise it at `chrome://extensi
 - **notifications** - Sending you a reminder if you haven't clicked
 - **host permissions for Arab.org** - Allowing the content script to run on the campaign page
 
-## Fonts
-
-The popup uses Open Sans and Ubuntu to stay close to Arab.org's typography. The font files are bundled in `fonts/` and loaded locally, so the extension does not contact Google Fonts at runtime.
-
 ## For contributors
 
 The extension is intentionally plain: no build step, no framework, and no remote runtime assets. The main files are:

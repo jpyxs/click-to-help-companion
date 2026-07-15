@@ -240,7 +240,7 @@ async function scheduleAlarm(name, targetHour) {
 
   const delayMinutes = (target.getTime() - now.getTime()) / (1000 * 60);
 
-  await alarmsClear(name); // clear first to prevent drift when settings change mid-day
+  await alarmsClear(name);
   chrome.alarms.create(name, {
     delayInMinutes: delayMinutes,
     periodInMinutes: 24 * 60
@@ -456,8 +456,8 @@ chrome.tabs.onRemoved.addListener(async (tabId) => {
  */
 function getWeekStartDate(dateStr) {
   const d = new Date(dateStr);
-  const day = d.getDay(); // 0=Sun … 6=Sat
-  const diff = (day === 0 ? -6 : 1) - day; // shift to Monday
+  const day = d.getDay();
+  const diff = (day === 0 ? -6 : 1) - day;
   d.setDate(d.getDate() + diff);
   return d.toLocaleDateString("en-CA");
 }
@@ -493,12 +493,11 @@ async function recordClick(tabId) {
   const bestStreak = Math.max(streak, data[STORAGE_KEYS.BEST_STREAK] || 0);
   const totalClicks = (data[STORAGE_KEYS.TOTAL_CLICKS] || 0) + 1;
 
-  // --- Week click tracking ---
   const currentWeekStart = getWeekStartDate(today);
   const storedWeekStart = data[STORAGE_KEYS.WEEK_START_DATE] || "";
   const weekClicks = storedWeekStart === currentWeekStart
     ? (data[STORAGE_KEYS.WEEK_CLICKS] || 0) + 1
-    : 1; // new week — reset to 1
+    : 1;
 
   await storageSet({
     [STORAGE_KEYS.STREAK]: streak,

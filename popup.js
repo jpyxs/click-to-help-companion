@@ -109,7 +109,6 @@ async function loadState() {
 
   const dateChanged = reconcileDate();
   if (dateChanged) {
-    // Persist the reset so background.js reads the correct streak/clicks on next click
     await persistState();
   }
 }
@@ -132,7 +131,7 @@ function reconcileDate() {
       }
     }
 
-    return true; // date changed — streak/clicks may have been reset
+    return true;
   }
 
   return false;
@@ -197,16 +196,14 @@ function updateStreakRing() {
     });
   });
 
-  // Gold milestone ring at 30+ day streaks
   dom.streakProgress.classList.toggle("milestone", state.streak >= MAX_STREAK_DISPLAY);
 }
 
-let _prevClickedToday = null; // null = first render, false/true = previous state
+let _prevClickedToday = null;
 
 function updateStatusBar() {
   const clickedToday = state.todayClicks > 0;
 
-  // Always clear the waiting shimmer when re-rendering status
   dom.btnClick.classList.remove("btn-click--waiting");
 
   if (clickedToday) {
@@ -277,7 +274,6 @@ function render() {
 let _countdownInterval = null;
 
 function updateCountdown() {
-  // Show countdown whenever auto-click is on — today's or tomorrow's
   const show = state.autoClick;
 
   dom.countdownRow.classList.toggle("visible", show);
@@ -295,7 +291,6 @@ function updateCountdown() {
       return;
     }
 
-    // Label reflects whether today's click is already done
     dom.countdownLabel.textContent = state.todayClicks > 0
       ? "Auto-click tomorrow"
       : "Next auto-click";
@@ -347,7 +342,6 @@ function openCampaignPage() {
         return;
       }
 
-      // Show shimmer while waiting for thank-you page confirmation
       dom.btnClick.textContent = "Waiting for Confirmation";
       dom.btnClick.classList.add("btn-click--waiting");
 
@@ -492,7 +486,6 @@ window.addEventListener("unload", () => {
   await loadState();
   render();
 
-  // Keep the footer version badge in sync with manifest.json — avoids string drift
   if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.getManifest) {
     const el = document.querySelector(".footer-version");
     if (el) el.textContent = `v${chrome.runtime.getManifest().version}`;
