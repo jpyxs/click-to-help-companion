@@ -122,8 +122,7 @@ async function setupAlarms() {
 
   if (data[STORAGE_KEYS.AUTO_CLICK]) {
     const today = getTodayString();
-    const alreadyClicked =
-      data[STORAGE_KEYS.TODAY_DATE] === today && data[STORAGE_KEYS.TODAY_CLICKS] > 0;
+    const alreadyClicked = hasClickedToday(data, today);
     const customTimes = getCustomTimes(data);
     scheduleAutoClickAlarm(data[STORAGE_KEYS.TIME_RANGE] || "morning", alreadyClicked, customTimes);
     openedCatchUpTab = await handleMissedAutoClickWindow(data);
@@ -221,6 +220,10 @@ function getCustomTimes(data) {
   };
 }
 
+function hasClickedToday(data, today) {
+  return data[STORAGE_KEYS.TODAY_DATE] === today && data[STORAGE_KEYS.TODAY_CLICKS] > 0;
+}
+
 function randomDateBetween(start, end) {
   return new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
 }
@@ -245,8 +248,7 @@ async function scheduleAlarm(name, targetHour) {
 
 async function handleMissedAutoClickWindow(data) {
   const today = getTodayString();
-  const alreadyClicked =
-    data[STORAGE_KEYS.TODAY_DATE] === today && data[STORAGE_KEYS.TODAY_CLICKS] > 0;
+  const alreadyClicked = hasClickedToday(data, today);
 
   if (alreadyClicked) return false;
 
@@ -296,8 +298,7 @@ async function handleAutoClick() {
   if (!data[STORAGE_KEYS.AUTO_CLICK]) return;
 
   const today = getTodayString();
-  const alreadyClicked =
-    data[STORAGE_KEYS.TODAY_DATE] === today && data[STORAGE_KEYS.TODAY_CLICKS] > 0;
+  const alreadyClicked = hasClickedToday(data, today);
 
   const customTimes = getCustomTimes(data);
   scheduleAutoClickAlarm(data[STORAGE_KEYS.TIME_RANGE] || "morning", alreadyClicked, customTimes);
@@ -392,8 +393,7 @@ async function handleReminder() {
   if (!data[STORAGE_KEYS.NOTIFICATIONS]) return;
 
   const today = getTodayString();
-  const alreadyClicked =
-    data[STORAGE_KEYS.TODAY_DATE] === today && data[STORAGE_KEYS.TODAY_CLICKS] > 0;
+  const alreadyClicked = hasClickedToday(data, today);
 
   if (alreadyClicked) return;
   if (data[STORAGE_KEYS.LAST_REMINDER_DATE] === today) return;
@@ -450,10 +450,9 @@ chrome.tabs.onRemoved.addListener(async (tabId) => {
 async function recordClick(tabId) {
   const data = await storageGet([...Object.values(STORAGE_KEYS), PENDING_AUTO_CLICK_TAB]);
   const today = getTodayString();
-  const todayClicks = data[STORAGE_KEYS.TODAY_CLICKS] || 0;
   const pendingTab = data[PENDING_AUTO_CLICK_TAB];
 
-  if (data[STORAGE_KEYS.TODAY_DATE] === today && todayClicks > 0) {
+  if (hasClickedToday(data, today)) {
     closePendingAutoClickTab(tabId, pendingTab);
     return;
   }
@@ -504,8 +503,7 @@ async function recordClick(tabId) {
 async function updateBadge() {
   const data = await storageGet([STORAGE_KEYS.TODAY_CLICKS, STORAGE_KEYS.TODAY_DATE]);
   const today = getTodayString();
-  const clickedToday =
-    data[STORAGE_KEYS.TODAY_DATE] === today && data[STORAGE_KEYS.TODAY_CLICKS] > 0;
+  const clickedToday = hasClickedToday(data, today);
 
   if (clickedToday) {
     chrome.action.setBadgeText({ text: "" });
@@ -531,8 +529,7 @@ async function handleKeyboardClick() {
   ]);
 
   const today = getTodayString();
-  const alreadyClicked =
-    data[STORAGE_KEYS.TODAY_DATE] === today && data[STORAGE_KEYS.TODAY_CLICKS] > 0;
+  const alreadyClicked = hasClickedToday(data, today);
 
   if (alreadyClicked) return;
   if (getPendingAutoClickTabId(data[PENDING_AUTO_CLICK_TAB])) return;
