@@ -1,4 +1,4 @@
-import { CAMPAIGN_URL, ALARM_AUTO_CLICK, STORAGE_KEYS, getTodayString } from "./shared.js";
+import { CAMPAIGN_URL, ALARM_AUTO_CLICK, STORAGE_KEYS, getTodayString, getWeekStartDate } from "./shared.js";
 
 /* --- Constants --- */
 
@@ -25,10 +25,6 @@ function storageRemove(keys) {
 
 function alarmsClear(name) {
   return new Promise((resolve) => chrome.alarms.clear(name, resolve));
-}
-
-function alarmsGet(name) {
-  return new Promise((resolve) => chrome.alarms.get(name, resolve));
 }
 
 function tabsCreate(props) {
@@ -450,17 +446,6 @@ chrome.tabs.onRemoved.addListener(async (tabId) => {
 });
 
 /* --- Click Recording --- */
-
-/**
- * Returns the ISO week start (Monday) date string "YYYY-MM-DD" for a given date string.
- */
-function getWeekStartDate(dateStr) {
-  const d = new Date(dateStr);
-  const day = d.getDay();
-  const diff = (day === 0 ? -6 : 1) - day;
-  d.setDate(d.getDate() + diff);
-  return d.toLocaleDateString("en-CA");
-}
 
 async function recordClick(tabId) {
   const data = await storageGet([...Object.values(STORAGE_KEYS), PENDING_AUTO_CLICK_TAB]);

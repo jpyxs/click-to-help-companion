@@ -19,6 +19,7 @@ The extension only counts a click after the campaign reaches the thank-you page.
 - **Reminder notifications** - Get a reminder at your chosen time if today's click has not been confirmed.
 - **At-risk countdown** - When the reminder hour passes without a click, the status bar shows a live countdown to midnight.
 - **Keyboard shortcut** - Press `Alt+Shift+C` from anywhere in the browser to trigger the campaign tab without opening the popup.
+- **Milestone celebrations** - A toast and ring glow animation appear when your streak hits 7, 14, or 30 days.
 
 ## Preview
 

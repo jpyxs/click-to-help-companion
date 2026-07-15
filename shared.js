@@ -27,3 +27,12 @@ export const STORAGE_KEYS = {
 export function getTodayString() {
   return new Date().toLocaleDateString("en-CA");
 }
+
+/** Returns the ISO week start (Monday) as "YYYY-MM-DD" for a given "YYYY-MM-DD" date string. */
+export function getWeekStartDate(dateStr) {
+  const d = new Date(dateStr);
+  const day = d.getDay();
+  const diff = (day === 0 ? -6 : 1) - day;
+  d.setDate(d.getDate() + diff);
+  return d.toLocaleDateString("en-CA");
+}

@@ -1,4 +1,4 @@
-import { CAMPAIGN_URL, ALARM_AUTO_CLICK, STORAGE_KEYS, getTodayString } from "./shared.js";
+import { CAMPAIGN_URL, ALARM_AUTO_CLICK, STORAGE_KEYS, getTodayString, getWeekStartDate } from "./shared.js";
 
 /* --- Constants --- */
 
@@ -30,7 +30,8 @@ const dom = {
   streakProgress: document.querySelector(".streak-progress"),
   countdownRow: document.getElementById("countdown-row"),
   countdownText: document.getElementById("countdown-text"),
-  countdownLabel: document.getElementById("countdown-label-text")
+  countdownLabel: document.getElementById("countdown-label-text"),
+  milestoneToast: document.getElementById("milestone-toast")
 };
 
 /* --- Utility Functions --- */
@@ -116,6 +117,7 @@ async function loadState() {
 
 function reconcileDate() {
   const today = getTodayString();
+  let changed = false;
 
   if (state.todayDate !== today) {
     state.todayClicks = 0;
@@ -124,18 +126,23 @@ function reconcileDate() {
     if (state.lastClickDate) {
       const lastDate = new Date(state.lastClickDate);
       const todayDate = new Date(today);
-      const diffMs = todayDate.getTime() - lastDate.getTime();
-      const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-
-      if (diffDays > 1) {
-        state.streak = 0;
-      }
+      const diffDays = Math.floor(
+        (todayDate.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24)
+      );
+      if (diffDays > 1) state.streak = 0;
     }
 
-    return true;
+    changed = true;
   }
 
-  return false;
+  const currentWeekStart = getWeekStartDate(today);
+  if (state.weekStartDate && state.weekStartDate !== currentWeekStart) {
+    state.weekClicks = 0;
+    state.weekStartDate = currentWeekStart;
+    changed = true;
+  }
+
+  return changed;
 }
 
 async function persistState() {
@@ -182,23 +189,33 @@ function getMidnightCountdown() {
 
 /* --- Milestone Celebration --- */
 
+let _milestoneToastTimer = null;
+let _milestoneRingTimer = null;
+
 function showMilestoneCelebration(streak) {
-  const toast = document.getElementById("milestone-toast");
   const ringEl = dom.streakProgress.closest(".streak-ring");
 
-  if (toast) {
+  if (dom.milestoneToast) {
+    if (_milestoneToastTimer) { clearTimeout(_milestoneToastTimer); _milestoneToastTimer = null; }
     const emoji = streak >= 30 ? "\uD83C\uDF1F" : "\uD83D\uDD25";
-    toast.textContent = `${emoji} ${streak}-Day Streak!`;
-    toast.classList.remove("visible");
-    void toast.offsetWidth;
-    toast.classList.add("visible");
-    setTimeout(() => toast.classList.remove("visible"), 2800);
+    dom.milestoneToast.textContent = `${emoji} ${streak}-Day Streak!`;
+    dom.milestoneToast.classList.remove("visible");
+    void dom.milestoneToast.offsetWidth;
+    dom.milestoneToast.classList.add("visible");
+    _milestoneToastTimer = setTimeout(() => {
+      dom.milestoneToast.classList.remove("visible");
+      _milestoneToastTimer = null;
+    }, 2800);
   }
 
   if (ringEl) {
+    if (_milestoneRingTimer) { clearTimeout(_milestoneRingTimer); _milestoneRingTimer = null; }
     ringEl.style.setProperty("--milestone-glow", streak >= 30 ? "#F5A623" : "var(--color-primary)");
     ringEl.classList.add("milestone-glow");
-    setTimeout(() => ringEl.classList.remove("milestone-glow"), 1100);
+    _milestoneRingTimer = setTimeout(() => {
+      ringEl.classList.remove("milestone-glow");
+      _milestoneRingTimer = null;
+    }, 1100);
   }
 }
 
@@ -253,15 +270,15 @@ function updateStatusBar() {
     dom.statusBar.classList.toggle("at-risk", atRisk);
     dom.statusIcon.innerHTML = "!";
 
+    clearAtRiskCountdown();
+
     if (atRisk) {
-      clearAtRiskCountdown();
       const updateAtRiskText = () => {
         dom.statusText.textContent = `Streak at risk \u2014 ${getMidnightCountdown()}`;
       };
       updateAtRiskText();
       _atRiskInterval = setInterval(updateAtRiskText, 60000);
     } else {
-      clearAtRiskCountdown();
       dom.statusText.textContent = "Pending until thank-you page";
     }
 
@@ -504,6 +521,8 @@ window.addEventListener("unload", () => {
     _renderDebounceTimer = null;
   }
   clearAtRiskCountdown();
+  if (_milestoneToastTimer) { clearTimeout(_milestoneToastTimer); _milestoneToastTimer = null; }
+  if (_milestoneRingTimer) { clearTimeout(_milestoneRingTimer); _milestoneRingTimer = null; }
 });
 
 /* --- Initialization --- */
