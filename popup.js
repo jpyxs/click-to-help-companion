@@ -290,7 +290,15 @@ function updateStatusBar() {
 }
 
 function render() {
+  const prevStreak = parseInt(dom.streakCount.textContent, 10);
   dom.streakCount.textContent = state.streak;
+
+  if (!isNaN(prevStreak) && state.streak > prevStreak) {
+    dom.streakCount.classList.remove("bump");
+    void dom.streakCount.offsetWidth;
+    dom.streakCount.classList.add("bump");
+  }
+
   dom.totalClicks.textContent = state.totalClicks;
   dom.weekClicks.textContent = state.weekClicks;
   dom.bestStreak.textContent = state.bestStreak;
@@ -425,7 +433,27 @@ function notifyBackground() {
 
 /* --- Event Listeners --- */
 
-dom.btnClick.addEventListener("click", handleClick);
+dom.btnClick.addEventListener("click", (e) => {
+  const btn = dom.btnClick;
+  const ripple = document.createElement("span");
+  const rect = btn.getBoundingClientRect();
+  const size = Math.max(rect.width, rect.height);
+  ripple.style.cssText = `
+    position:absolute;
+    border-radius:50%;
+    width:${size}px;
+    height:${size}px;
+    left:${e.clientX - rect.left - size / 2}px;
+    top:${e.clientY - rect.top - size / 2}px;
+    background:rgba(255,255,255,0.35);
+    transform:scale(0);
+    animation:btn-ripple 500ms ease-out forwards;
+    pointer-events:none;
+  `;
+  btn.appendChild(ripple);
+  ripple.addEventListener("animationend", () => ripple.remove());
+  handleClick();
+});
 
 dom.toggleAutoclick.addEventListener("change", () => {
   state.autoClick = dom.toggleAutoclick.checked;
