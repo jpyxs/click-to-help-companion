@@ -215,26 +215,30 @@ function showMilestoneCelebration(streak) {
     _milestoneRingTimer = setTimeout(() => {
       ringEl.classList.remove("milestone-glow");
       _milestoneRingTimer = null;
-    }, 1100);
+    }, 1400);
   }
 }
 
 /* --- Rendering --- */
 
-function updateStreakRing() {
+function updateStreakRing(isInitial) {
   const ratio = Math.min(state.streak / MAX_STREAK_DISPLAY, 1);
   const targetOffset = STREAK_CIRCUMFERENCE * (1 - ratio);
 
-  // Reset to empty (no transition), then trigger CSS draw-in animation
-  dom.streakProgress.style.transition = "none";
-  dom.streakProgress.style.strokeDashoffset = STREAK_CIRCUMFERENCE;
+  if (isInitial) {
+    dom.streakProgress.style.transition = "none";
+    dom.streakProgress.style.strokeDashoffset = STREAK_CIRCUMFERENCE;
 
-  requestAnimationFrame(() => {
     requestAnimationFrame(() => {
-      dom.streakProgress.style.transition = "";
-      dom.streakProgress.style.strokeDashoffset = targetOffset;
+      requestAnimationFrame(() => {
+        dom.streakProgress.style.transition = "";
+        dom.streakProgress.style.strokeDashoffset = targetOffset;
+      });
     });
-  });
+  } else {
+    dom.streakProgress.style.transition = "";
+    dom.streakProgress.style.strokeDashoffset = targetOffset;
+  }
 
   dom.streakProgress.classList.toggle("milestone", state.streak >= MAX_STREAK_DISPLAY);
 }
@@ -251,10 +255,9 @@ function updateStatusBar() {
     dom.statusBar.classList.remove("at-risk");
     clearAtRiskCountdown();
 
-    // Only flash on a genuine pending → completed transition, not on initial open
     if (_prevClickedToday === false) {
       dom.statusBar.classList.add("just-completed");
-      setTimeout(() => dom.statusBar.classList.remove("just-completed"), 750);
+      setTimeout(() => dom.statusBar.classList.remove("just-completed"), 950);
       if (MILESTONE_STREAKS.has(state.streak)) {
         showMilestoneCelebration(state.streak);
       }
@@ -289,11 +292,13 @@ function updateStatusBar() {
   _prevClickedToday = clickedToday;
 }
 
+let _initialRender = true;
+
 function render() {
   const prevStreak = parseInt(dom.streakCount.textContent, 10);
   dom.streakCount.textContent = state.streak;
 
-  if (!isNaN(prevStreak) && state.streak > prevStreak) {
+  if (!_initialRender && !isNaN(prevStreak) && state.streak > prevStreak) {
     dom.streakCount.classList.remove("bump");
     void dom.streakCount.offsetWidth;
     dom.streakCount.classList.add("bump");
@@ -315,9 +320,11 @@ function render() {
   dom.customTimeEnd.value = state.customTimeEnd;
   updateCustomTimeVisibility();
 
-  updateStreakRing();
+  updateStreakRing(_initialRender);
   updateStatusBar();
   updateCountdown();
+  
+  _initialRender = false;
 }
 
 /* --- Countdown --- */
@@ -396,7 +403,6 @@ function openCampaignPage() {
       dom.btnClick.textContent = "Waiting for Confirmation";
       dom.btnClick.classList.add("btn-click--waiting");
 
-      // 6 s gives enough time for the campaign page to load, click, and redirect
       setTimeout(() => {
         if (state.todayClicks === 0) {
           dom.btnClick.disabled = false;
@@ -413,20 +419,12 @@ function openCampaignPage() {
   }
 }
 
-/* --- Settings Handlers --- */
 
-async function handleToggle(key, element) {
-  state[key] = element.checked;
-  await persistState();
-  notifyBackground();
-}
 
-function notifyBackground() {
+function notifyBackground(type) {
   if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.sendMessage) {
-    chrome.runtime.sendMessage({ type: "SETTINGS_CHANGED" }, () => {
-      if (chrome.runtime.lastError) {
-        return;
-      }
+    chrome.runtime.sendMessage({ type }, () => {
+      if (chrome.runtime.lastError) return;
     });
   }
 }
@@ -460,14 +458,14 @@ dom.toggleAutoclick.addEventListener("change", () => {
   persistState();
   dom.timeRangeContainer.classList.toggle("visible", state.autoClick);
   updateCountdown();
-  notifyBackground();
+  notifyBackground("AUTO_CLICK_CHANGED");
 });
 
 dom.timeRangeSelect.addEventListener("change", () => {
   state.timeRange = dom.timeRangeSelect.value;
   updateCustomTimeVisibility();
   persistState();
-  notifyBackground();
+  notifyBackground("AUTO_CLICK_CHANGED");
 });
 
 /** Shows/hides the custom time inputs depending on the selected time range. */
@@ -495,21 +493,23 @@ async function saveCustomTimes() {
   state.customTimeStart = dom.customTimeStart.value;
   state.customTimeEnd = dom.customTimeEnd.value;
   await persistState();
-  notifyBackground();
+  notifyBackground("AUTO_CLICK_CHANGED");
 }
 
 dom.customTimeStart.addEventListener("change", saveCustomTimes);
 dom.customTimeEnd.addEventListener("change", saveCustomTimes);
 
 dom.toggleNotifications.addEventListener("change", () => {
-  handleToggle("notifications", dom.toggleNotifications);
+  state.notifications = dom.toggleNotifications.checked;
+  persistState();
   dom.reminderHourContainer.classList.toggle("visible", state.notifications);
+  notifyBackground("NOTIFICATIONS_CHANGED");
 });
 
 dom.reminderHourSelect.addEventListener("change", () => {
   state.reminderHour = Number(dom.reminderHourSelect.value);
   persistState();
-  notifyBackground();
+  notifyBackground("NOTIFICATIONS_CHANGED");
 });
 
 document.querySelectorAll(".footer-link").forEach((link) => {

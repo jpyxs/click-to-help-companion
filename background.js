@@ -153,6 +153,46 @@ function scheduleAutoClickAlarm(timeRange, alreadyClicked = false, customTimes =
   chrome.alarms.create(ALARM_AUTO_CLICK, { delayInMinutes: delayMinutes });
 }
 
+async function setupAutoClickAlarm() {
+  const data = await storageGet([
+    STORAGE_KEYS.AUTO_CLICK,
+    STORAGE_KEYS.TIME_RANGE,
+    STORAGE_KEYS.TODAY_CLICKS,
+    STORAGE_KEYS.TODAY_DATE,
+    STORAGE_KEYS.CUSTOM_TIME_START,
+    STORAGE_KEYS.CUSTOM_TIME_END,
+    PENDING_AUTO_CLICK_TAB
+  ]);
+
+  if (data[STORAGE_KEYS.AUTO_CLICK]) {
+    const today = getTodayString();
+    const alreadyClicked = hasClickedToday(data, today);
+    const customTimes = getCustomTimes(data);
+    scheduleAutoClickAlarm(data[STORAGE_KEYS.TIME_RANGE] || "morning", alreadyClicked, customTimes);
+    await handleMissedAutoClickWindow(data);
+  } else {
+    await alarmsClear(ALARM_AUTO_CLICK);
+    await alarmsClear(ALARM_AUTO_CLICK_CLEANUP);
+    await storageRemove(PENDING_AUTO_CLICK_TAB);
+  }
+}
+
+async function setupReminderAlarm() {
+  const data = await storageGet([
+    STORAGE_KEYS.NOTIFICATIONS,
+    STORAGE_KEYS.REMINDER_HOUR
+  ]);
+
+  const reminderHour = data[STORAGE_KEYS.REMINDER_HOUR] ?? 18;
+
+  if (data[STORAGE_KEYS.NOTIFICATIONS]) {
+    scheduleAlarm(ALARM_REMINDER, reminderHour);
+    handleMissedReminder(reminderHour);
+  } else {
+    await alarmsClear(ALARM_REMINDER);
+  }
+}
+
 function getNextAutoClickTarget(timeRange, now, alreadyClicked = false, customTimes = null) {
   const todayWindow = getTimeRangeWindow(timeRange, now, customTimes);
   let start = todayWindow.start;
@@ -423,6 +463,16 @@ chrome.notifications.onClicked.addListener((notificationId) => {
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === "CLICK_CONFIRMED") {
     recordClick(sender.tab?.id);
+    sendResponse({ status: "ok" });
+  }
+
+  if (message.type === "AUTO_CLICK_CHANGED") {
+    setupAutoClickAlarm();
+    sendResponse({ status: "ok" });
+  }
+
+  if (message.type === "NOTIFICATIONS_CHANGED") {
+    setupReminderAlarm();
     sendResponse({ status: "ok" });
   }
 
