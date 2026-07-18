@@ -38,8 +38,8 @@ const dom = {
 
 function loadStorage(keys) {
   return new Promise((resolve) => {
-    if (typeof chrome !== "undefined" && chrome.storage && chrome.storage.local) {
-      chrome.storage.local.get(keys, resolve);
+    if (typeof chrome !== "undefined" && chrome.storage && chrome.storage.sync) {
+      chrome.storage.sync.get(keys, resolve);
     } else {
       const result = {};
       keys.forEach((key) => {
@@ -59,8 +59,8 @@ function loadStorage(keys) {
 
 function saveStorage(data) {
   return new Promise((resolve) => {
-    if (typeof chrome !== "undefined" && chrome.storage && chrome.storage.local) {
-      chrome.storage.local.set(data, resolve);
+    if (typeof chrome !== "undefined" && chrome.storage && chrome.storage.sync) {
+      chrome.storage.sync.set(data, resolve);
     } else {
       Object.entries(data).forEach(([key, value]) => {
         localStorage.setItem(key, JSON.stringify(value));

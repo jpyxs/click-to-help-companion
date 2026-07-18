@@ -12,15 +12,15 @@ const CURRENT_STORAGE_VERSION = 3;
 /* --- Promise Wrappers --- */
 
 function storageGet(keys) {
-  return new Promise((resolve) => chrome.storage.local.get(keys, resolve));
+  return new Promise((resolve) => chrome.storage.sync.get(keys, resolve));
 }
 
 function storageSet(data) {
-  return new Promise((resolve) => chrome.storage.local.set(data, resolve));
+  return new Promise((resolve) => chrome.storage.sync.set(data, resolve));
 }
 
 function storageRemove(keys) {
-  return new Promise((resolve) => chrome.storage.local.remove(keys, resolve));
+  return new Promise((resolve) => chrome.storage.sync.remove(keys, resolve));
 }
 
 function alarmsClear(name) {
@@ -65,6 +65,15 @@ chrome.runtime.onInstalled.addListener(async (details) => {
 });
 
 async function runStorageMigrations() {
+  // Migrate from local to sync if sync is empty but local has data
+  const syncData = await new Promise(r => chrome.storage.sync.get(null, r));
+  if (Object.keys(syncData).length === 0) {
+    const localData = await new Promise(r => chrome.storage.local.get(null, r));
+    if (Object.keys(localData).length > 0) {
+      await new Promise(r => chrome.storage.sync.set(localData, r));
+    }
+  }
+
   const { storageVersion } = await storageGet("storageVersion");
   const from = storageVersion || 0;
 

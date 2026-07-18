@@ -79,7 +79,7 @@ Your streak increases by 1 for each calendar day with a confirmed click. If more
 
 The **This Week** stat shows how many confirmed clicks you have made in the current calendar week (Monday–Sunday). It resets automatically each week.
 
-All streaks, settings, and click counts are stored in `chrome.storage.local` on your browser. The extension does not use an external account or send your stats to a server.
+All streaks, settings, and click counts are stored in `chrome.storage.sync` on your browser so they sync across your devices. The extension does not use an external account or send your stats to a server.
 
 ## Keyboard shortcut
 
