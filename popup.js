@@ -528,7 +528,7 @@ let _renderDebounceTimer = null;
 
 if (typeof chrome !== "undefined" && chrome.storage && chrome.storage.onChanged) {
   chrome.storage.onChanged.addListener((changes, areaName) => {
-    if (areaName === "local") {
+    if (areaName === "sync") {
       clearTimeout(_renderDebounceTimer);
       _renderDebounceTimer = setTimeout(() => {
         loadState().then(render);

@@ -38,29 +38,52 @@ function tabsRemove(tabId) {
 /* --- Lifecycle Events --- */
 
 chrome.runtime.onInstalled.addListener(async (details) => {
-  if (details.reason === "install") {
-    await storageSet({
-      storageVersion: CURRENT_STORAGE_VERSION,
-      [STORAGE_KEYS.STREAK]: 0,
-      [STORAGE_KEYS.BEST_STREAK]: 0,
-      [STORAGE_KEYS.TOTAL_CLICKS]: 0,
-      [STORAGE_KEYS.LAST_CLICK_DATE]: "",
-      [STORAGE_KEYS.TODAY_CLICKS]: 0,
-      [STORAGE_KEYS.TODAY_DATE]: "",
-      [STORAGE_KEYS.AUTO_CLICK]: false,
-      [STORAGE_KEYS.TIME_RANGE]: "morning",
-      [STORAGE_KEYS.NOTIFICATIONS]: true,
-      [STORAGE_KEYS.LAST_REMINDER_DATE]: "",
-      [STORAGE_KEYS.CUSTOM_TIME_START]: "09:00",
-      [STORAGE_KEYS.CUSTOM_TIME_END]: "10:00",
-      [STORAGE_KEYS.REMINDER_HOUR]: 18,
-      [STORAGE_KEYS.WEEK_CLICKS]: 0,
-      [STORAGE_KEYS.WEEK_START_DATE]: ""
-    });
-  } else if (details.reason === "update") {
-    await runStorageMigrations();
+  // Unpacked extension reloads sometimes trigger "install" and wipe data.
+  // We'll safely restore from local storage if local has their actual streak.
+  const localData = await new Promise(r => chrome.storage.local.get(null, r));
+  const syncData = await new Promise(r => chrome.storage.sync.get(null, r));
+  
+  const localStreak = localData[STORAGE_KEYS.STREAK] || 0;
+  const syncStreak = syncData[STORAGE_KEYS.STREAK] || 0;
+  
+  // If local has a higher streak, they lost data (e.g. 1 vs 25), so restore it!
+  if (localStreak > syncStreak) {
+    await new Promise(r => chrome.storage.sync.set(localData, r));
   }
 
+  // Only initialize missing defaults
+  const currentData = await storageGet(null);
+  const defaults = {
+    storageVersion: CURRENT_STORAGE_VERSION,
+    [STORAGE_KEYS.STREAK]: 0,
+    [STORAGE_KEYS.BEST_STREAK]: 0,
+    [STORAGE_KEYS.TOTAL_CLICKS]: 0,
+    [STORAGE_KEYS.LAST_CLICK_DATE]: "",
+    [STORAGE_KEYS.TODAY_CLICKS]: 0,
+    [STORAGE_KEYS.TODAY_DATE]: "",
+    [STORAGE_KEYS.AUTO_CLICK]: false,
+    [STORAGE_KEYS.TIME_RANGE]: "morning",
+    [STORAGE_KEYS.NOTIFICATIONS]: true,
+    [STORAGE_KEYS.LAST_REMINDER_DATE]: "",
+    [STORAGE_KEYS.CUSTOM_TIME_START]: "09:00",
+    [STORAGE_KEYS.CUSTOM_TIME_END]: "10:00",
+    [STORAGE_KEYS.REMINDER_HOUR]: 18,
+    [STORAGE_KEYS.WEEK_CLICKS]: 0,
+    [STORAGE_KEYS.WEEK_START_DATE]: ""
+  };
+
+  const toSet = {};
+  for (const [key, value] of Object.entries(defaults)) {
+    if (currentData[key] === undefined) {
+      toSet[key] = value;
+    }
+  }
+  
+  if (Object.keys(toSet).length > 0) {
+    await storageSet(toSet);
+  }
+
+  await runStorageMigrations();
   setupAlarms();
 });
 
@@ -608,7 +631,7 @@ async function handleKeyboardClick() {
 }
 
 chrome.storage.onChanged.addListener((changes, areaName) => {
-  if (areaName === "local") {
+  if (areaName === "sync") {
     updateBadge();
   }
 });
