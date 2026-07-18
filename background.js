@@ -42,10 +42,10 @@ chrome.runtime.onInstalled.addListener(async (details) => {
   // We'll safely restore from local storage if local has their actual streak.
   const localData = await new Promise(r => chrome.storage.local.get(null, r));
   const syncData = await new Promise(r => chrome.storage.sync.get(null, r));
-  
+
   const localStreak = localData[STORAGE_KEYS.STREAK] || 0;
   const syncStreak = syncData[STORAGE_KEYS.STREAK] || 0;
-  
+
   // If local has a higher streak, they lost data (e.g. 1 vs 25), so restore it!
   if (localStreak > syncStreak) {
     await new Promise(r => chrome.storage.sync.set(localData, r));
@@ -78,7 +78,7 @@ chrome.runtime.onInstalled.addListener(async (details) => {
       toSet[key] = value;
     }
   }
-  
+
   if (Object.keys(toSet).length > 0) {
     await storageSet(toSet);
   }
@@ -292,12 +292,12 @@ function getTimeRangeWindow(timeRange, date, customTimes = null) {
 
 function getTimeRangeHours(timeRange) {
   switch (timeRange) {
-    case "morning":   return { minHour: 8,  maxHour: 10 };
-    case "midday":    return { minHour: 11, maxHour: 14 };
+    case "morning": return { minHour: 8, maxHour: 10 };
+    case "midday": return { minHour: 11, maxHour: 14 };
     case "afternoon": return { minHour: 15, maxHour: 17 };
-    case "evening":   return { minHour: 18, maxHour: 20 };
-    case "night":     return { minHour: 21, maxHour: 23 };
-    default:          return { minHour: 8,  maxHour: 10 };
+    case "evening": return { minHour: 18, maxHour: 20 };
+    case "night": return { minHour: 21, maxHour: 23 };
+    default: return { minHour: 8, maxHour: 10 };
   }
 }
 
@@ -369,9 +369,9 @@ function handleMissedReminder(reminderHour) {
 /* --- Alarm Handlers --- */
 
 chrome.alarms.onAlarm.addListener((alarm) => {
-  if (alarm.name === ALARM_AUTO_CLICK)         handleAutoClick();
+  if (alarm.name === ALARM_AUTO_CLICK) handleAutoClick();
   if (alarm.name === ALARM_AUTO_CLICK_CLEANUP) cleanupPendingAutoClickTab();
-  if (alarm.name === ALARM_REMINDER)           handleReminder();
+  if (alarm.name === ALARM_REMINDER) handleReminder();
 });
 
 async function handleAutoClick() {
@@ -434,7 +434,7 @@ async function cleanupPendingAutoClickTab() {
   const pendingTabId = getPendingAutoClickTabId(pendingTab);
   if (!pendingTabId) return;
 
-  await tabsRemove(pendingTabId).catch(() => {});
+  await tabsRemove(pendingTabId).catch(() => { });
   await storageRemove(PENDING_AUTO_CLICK_TAB);
   await alarmsClear(ALARM_AUTO_CLICK_CLEANUP);
 
@@ -455,7 +455,7 @@ async function closePendingAutoClickTab(tabId, pendingTab) {
   const pendingTabId = getPendingAutoClickTabId(pendingTab);
   if (!pendingTabId || tabId !== pendingTabId) return;
 
-  await tabsRemove(tabId).catch(() => {});
+  await tabsRemove(tabId).catch(() => { });
   await storageRemove(PENDING_AUTO_CLICK_TAB);
   await alarmsClear(ALARM_AUTO_CLICK_CLEANUP);
 }

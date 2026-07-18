@@ -76,7 +76,8 @@
   --smooth: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-html, body {
+html,
+body {
   width: 380px;
   height: 560px;
   overflow: hidden;
@@ -104,8 +105,15 @@ body {
 }
 
 @keyframes popup-enter {
-  from { opacity: 0; transform: translateY(6px) scale(0.985); }
-  to   { opacity: 1; transform: translateY(0)  scale(1); }
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.985);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 /* --- Milestone Toast --- */
@@ -136,12 +144,37 @@ body {
 }
 
 @keyframes milestone-enter {
-  0%   { opacity: 0; transform: translateY(-16px) scale(0.72); filter: blur(4px); }
-  12%  { opacity: 1; transform: translateY(4px)  scale(1.06); filter: blur(0); }
-  18%  { transform: translateY(-2px) scale(0.98); }
-  24%  { transform: translateY(0) scale(1); }
-  72%  { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
-  100% { opacity: 0; transform: translateY(-8px) scale(0.94); filter: blur(2px); }
+  0% {
+    opacity: 0;
+    transform: translateY(-16px) scale(0.72);
+    filter: blur(4px);
+  }
+
+  12% {
+    opacity: 1;
+    transform: translateY(4px) scale(1.06);
+    filter: blur(0);
+  }
+
+  18% {
+    transform: translateY(-2px) scale(0.98);
+  }
+
+  24% {
+    transform: translateY(0) scale(1);
+  }
+
+  72% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.94);
+    filter: blur(2px);
+  }
 }
 
 /* --- Scrollbar --- */
@@ -216,9 +249,17 @@ body {
   height: 33.33%;
 }
 
-.flag-black { background: var(--flag-black); }
-.flag-white { background: var(--flag-white); }
-.flag-green { background: var(--flag-green); }
+.flag-black {
+  background: var(--flag-black);
+}
+
+.flag-white {
+  background: var(--flag-white);
+}
+
+.flag-green {
+  background: var(--flag-green);
+}
 
 .flag-triangle {
   position: absolute;
@@ -293,8 +334,17 @@ body {
 }
 
 @keyframes milestone-pulse {
-  0%, 100% { opacity: 1; filter: drop-shadow(0 0 0px transparent); }
-  50%       { opacity: 0.8; filter: drop-shadow(0 0 6px #F5A623); }
+
+  0%,
+  100% {
+    opacity: 1;
+    filter: drop-shadow(0 0 0px transparent);
+  }
+
+  50% {
+    opacity: 0.8;
+    filter: drop-shadow(0 0 6px #F5A623);
+  }
 }
 
 .streak-progress.milestone {
@@ -309,10 +359,25 @@ body {
 }
 
 @keyframes milestone-ring-glow {
-  0%   { filter: drop-shadow(0 0 0px transparent); transform: scale(1); }
-  25%  { filter: drop-shadow(0 0 14px var(--milestone-glow, var(--color-primary))); transform: scale(1.04); }
-  60%  { filter: drop-shadow(0 0 8px var(--milestone-glow, var(--color-primary))); transform: scale(1); }
-  100% { filter: drop-shadow(0 0 0px transparent); transform: scale(1); }
+  0% {
+    filter: drop-shadow(0 0 0px transparent);
+    transform: scale(1);
+  }
+
+  25% {
+    filter: drop-shadow(0 0 14px var(--milestone-glow, var(--color-primary)));
+    transform: scale(1.04);
+  }
+
+  60% {
+    filter: drop-shadow(0 0 8px var(--milestone-glow, var(--color-primary)));
+    transform: scale(1);
+  }
+
+  100% {
+    filter: drop-shadow(0 0 0px transparent);
+    transform: scale(1);
+  }
 }
 
 .streak-value {
@@ -339,9 +404,17 @@ body {
 }
 
 @keyframes number-bump {
-  0%   { transform: scale(1); }
-  40%  { transform: scale(1.22); }
-  100% { transform: scale(1); }
+  0% {
+    transform: scale(1);
+  }
+
+  40% {
+    transform: scale(1.22);
+  }
+
+  100% {
+    transform: scale(1);
+  }
 }
 
 .streak-unit {
@@ -392,16 +465,31 @@ body {
 
 .stat-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.09);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.09);
 }
 
-.stat-card:nth-child(1) { animation-delay: 80ms; }
-.stat-card:nth-child(2) { animation-delay: 160ms; }
-.stat-card:nth-child(3) { animation-delay: 240ms; }
+.stat-card:nth-child(1) {
+  animation-delay: 80ms;
+}
+
+.stat-card:nth-child(2) {
+  animation-delay: 160ms;
+}
+
+.stat-card:nth-child(3) {
+  animation-delay: 240ms;
+}
 
 @keyframes stat-enter {
-  from { opacity: 0; transform: translateY(8px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .stat-value {
@@ -438,9 +526,21 @@ body {
 }
 
 @keyframes status-complete-flash {
-  0%   { background: #C6F0D8; border-color: #27AE60; box-shadow: 0 0 0 0 rgba(46,204,113,0.4); }
-  40%  { box-shadow: 0 0 0 6px rgba(46,204,113,0); }
-  100% { background: #E8F8EF; border-color: var(--color-success); box-shadow: 0 0 0 0 transparent; }
+  0% {
+    background: #C6F0D8;
+    border-color: #27AE60;
+    box-shadow: 0 0 0 0 rgba(46, 204, 113, 0.4);
+  }
+
+  40% {
+    box-shadow: 0 0 0 6px rgba(46, 204, 113, 0);
+  }
+
+  100% {
+    background: #E8F8EF;
+    border-color: var(--color-success);
+    box-shadow: 0 0 0 0 transparent;
+  }
 }
 
 .status-bar.completed {
@@ -478,9 +578,23 @@ body {
 }
 
 @keyframes icon-pulse {
-  0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 0 0 0 rgba(244,89,28,0.5); }
-  30%       { transform: scale(1.15); box-shadow: 0 0 0 5px rgba(244,89,28,0); }
-  60%       { opacity: 0.8; transform: scale(0.92); }
+
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(244, 89, 28, 0.5);
+  }
+
+  30% {
+    transform: scale(1.15);
+    box-shadow: 0 0 0 5px rgba(244, 89, 28, 0);
+  }
+
+  60% {
+    opacity: 0.8;
+    transform: scale(0.92);
+  }
 }
 
 .status-bar:not(.completed) .status-icon {
@@ -537,12 +651,12 @@ body {
   padding: 7px 0;
 }
 
-.setting-row + .setting-row {
+.setting-row+.setting-row {
   border-top: 1px solid var(--color-border);
 }
 
-.setting-row + .time-range-container.visible,
-.setting-row + .reminder-hour-container.visible {
+.setting-row+.time-range-container.visible,
+.setting-row+.reminder-hour-container.visible {
   border-top: 1px solid var(--color-border);
 }
 
@@ -728,8 +842,15 @@ body {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(-4px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* --- Toggle Switch --- */
@@ -775,15 +896,15 @@ body {
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
 }
 
-.toggle input:checked + .toggle-slider {
+.toggle input:checked+.toggle-slider {
   background: var(--color-primary);
 }
 
-.toggle input:checked + .toggle-slider::before {
+.toggle input:checked+.toggle-slider::before {
   transform: translateX(16px);
 }
 
-.toggle input:focus-visible + .toggle-slider {
+.toggle input:focus-visible+.toggle-slider {
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
 }
@@ -818,7 +939,7 @@ body {
   content: "";
   position: absolute;
   inset: 0;
-  background: radial-gradient(circle at center, rgba(255,255,255,0.25) 0%, transparent 70%);
+  background: radial-gradient(circle at center, rgba(255, 255, 255, 0.25) 0%, transparent 70%);
   opacity: 0;
   transition: opacity 300ms ease;
   pointer-events: none;
@@ -881,25 +1002,35 @@ body {
 }
 
 @keyframes btn-shimmer {
-  0%   { background-position: 200% center; }
-  100% { background-position: -200% center; }
+  0% {
+    background-position: 200% center;
+  }
+
+  100% {
+    background-position: -200% center;
+  }
 }
 
 @keyframes btn-ripple {
-  from { transform: scale(0); opacity: 1; }
-  to   { transform: scale(2.2); opacity: 0; }
+  from {
+    transform: scale(0);
+    opacity: 1;
+  }
+
+  to {
+    transform: scale(2.2);
+    opacity: 0;
+  }
 }
 
 .btn-click.btn-click--waiting,
 .btn-click.btn-click--waiting:disabled {
-  background: linear-gradient(
-    90deg,
-    var(--color-primary-dark) 0%,
-    var(--color-primary) 30%,
-    #FF8A56 50%,
-    var(--color-primary) 70%,
-    var(--color-primary-dark) 100%
-  );
+  background: linear-gradient(90deg,
+      var(--color-primary-dark) 0%,
+      var(--color-primary) 30%,
+      #FF8A56 50%,
+      var(--color-primary) 70%,
+      var(--color-primary-dark) 100%);
   background-size: 300% auto;
   animation: btn-shimmer 2s linear infinite;
   cursor: default;
@@ -961,13 +1092,11 @@ body {
   border-radius: 1px;
   overflow: hidden;
   margin-bottom: 8px;
-  background: linear-gradient(
-    to right,
-    var(--flag-red) 0% 25%,
-    var(--flag-green) 25% 50%,
-    var(--flag-white) 50% 75%,
-    var(--flag-black) 75% 100%
-  );
+  background: linear-gradient(to right,
+      var(--flag-red) 0% 25%,
+      var(--flag-green) 25% 50%,
+      var(--flag-white) 50% 75%,
+      var(--flag-black) 75% 100%);
 }
 
 .footer-meta {
@@ -1008,6 +1137,13 @@ body {
 }
 
 @keyframes confetti-fall {
-  0% { transform: translateY(0) rotate(0deg); opacity: 1; }
-  100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+  0% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 1;
+  }
+
+  100% {
+    transform: translateY(110vh) rotate(720deg);
+    opacity: 0;
+  }
 }

@@ -4,6 +4,12 @@
 
 <h1 align="center">Click to Help Companion</h1>
 
+<p align="center">
+  <a href="https://github.com/Safouene1/support-palestine-banner/blob/master/Markdown-pages/Support.md">
+    <img src="https://raw.githubusercontent.com/Safouene1/support-palestine-banner/master/StandWithPalestine.svg" alt="StandWithPalestine">
+  </a>
+</p>
+
 A small browser extension for Arab.org's Click-to-Help campaigns, starting with Palestine. It helps you open the campaign from the toolbar, keeps a local streak, and can remind you or run a daily auto-click when you turn that on.
 
 The extension only counts a click after the campaign reaches the thank-you page. Opening the campaign page or attempting a click is not enough to update your stats.
@@ -107,3 +113,5 @@ This project is not affiliated with or endorsed by Arab.org.
 ## License
 
 This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
+
+<div align="center"><a href="https://github.com/Safouene1/support-palestine-banner/blob/master/Markdown-pages/Support.md"><img src="https://raw.githubusercontent.com/Safouene1/support-palestine-banner/master/banner-support.svg" alt="Support Palestine" style="width: 100%;"></a></div>

@@ -350,7 +350,7 @@ function render() {
   updateStreakRing(_initialRender);
   updateStatusBar();
   updateCountdown();
-  
+
   _initialRender = false;
 }
 
@@ -525,7 +525,12 @@ async function saveCustomTimes() {
 }
 
 dom.exactTimeInput.addEventListener("change", (e) => {
-  state.exactTime = e.target.value;
+  let value = e.target.value;
+  if (!value) {
+    value = "12:00";
+    dom.exactTimeInput.value = value;
+  }
+  state.exactTime = value;
   persistState();
   notifyBackground("AUTO_CLICK_CHANGED");
 });
