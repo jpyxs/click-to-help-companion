@@ -669,13 +669,15 @@ body {
 
 /* --- Custom Time Inputs --- */
 
-.custom-time-container {
+.custom-time-container,
+.exact-time-container {
   display: none;
   flex-direction: column;
   gap: 4px;
 }
 
-.custom-time-container.visible {
+.custom-time-container.visible,
+.exact-time-container.visible {
   display: flex;
   animation: fadeIn 200ms ease;
 }
@@ -719,7 +721,10 @@ body {
   font-family: var(--font-body);
   font-size: 10px;
   color: #E87D1A;
-  min-height: 14px;
+}
+
+.custom-time-hint:empty {
+  display: none;
 }
 
 @keyframes fadeIn {

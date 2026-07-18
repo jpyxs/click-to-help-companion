@@ -20,7 +20,8 @@ export const STORAGE_KEYS = {
   CUSTOM_TIME_END: "customTimeEnd",
   REMINDER_HOUR: "reminderHour",
   WEEK_CLICKS: "weekClicks",
-  WEEK_START_DATE: "weekStartDate"
+  WEEK_START_DATE: "weekStartDate",
+  EXACT_TIME: "exactTime"
 };
 
 /** Returns today's date as "YYYY-MM-DD" in the local timezone. */

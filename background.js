@@ -140,6 +140,7 @@ async function setupAlarms() {
   const data = await storageGet([
     STORAGE_KEYS.AUTO_CLICK,
     STORAGE_KEYS.TIME_RANGE,
+    STORAGE_KEYS.EXACT_TIME,
     STORAGE_KEYS.NOTIFICATIONS,
     STORAGE_KEYS.TODAY_CLICKS,
     STORAGE_KEYS.TODAY_DATE,
@@ -189,6 +190,7 @@ async function setupAutoClickAlarm() {
   const data = await storageGet([
     STORAGE_KEYS.AUTO_CLICK,
     STORAGE_KEYS.TIME_RANGE,
+    STORAGE_KEYS.EXACT_TIME,
     STORAGE_KEYS.TODAY_CLICKS,
     STORAGE_KEYS.TODAY_DATE,
     STORAGE_KEYS.CUSTOM_TIME_START,
@@ -226,6 +228,17 @@ async function setupReminderAlarm() {
 }
 
 function getNextAutoClickTarget(timeRange, now, alreadyClicked = false, customTimes = null) {
+  if (timeRange === "exact") {
+    const [h, m] = (customTimes?.exact || "12:00").split(":").map(Number);
+    const target = new Date(now);
+    target.setHours(h, m, 0, 0);
+
+    if (alreadyClicked || now > target) {
+      target.setDate(target.getDate() + 1);
+    }
+    return target;
+  }
+
   const todayWindow = getTimeRangeWindow(timeRange, now, customTimes);
   let start = todayWindow.start;
   let end = todayWindow.end;
@@ -258,7 +271,11 @@ function getNextAutoClickTarget(timeRange, now, alreadyClicked = false, customTi
 function getTimeRangeWindow(timeRange, date, customTimes = null) {
   let minHour, minMinute = 0, maxHour, maxMinute = 59;
 
-  if (timeRange === "custom" && customTimes?.start && customTimes?.end) {
+  if (timeRange === "exact" && customTimes?.exact) {
+    const [h, m] = customTimes.exact.split(":").map(Number);
+    minHour = maxHour = h;
+    minMinute = maxMinute = m;
+  } else if (timeRange === "custom" && customTimes?.start && customTimes?.end) {
     [minHour, minMinute] = customTimes.start.split(":").map(Number);
     [maxHour, maxMinute] = customTimes.end.split(":").map(Number);
   } else {
@@ -288,7 +305,8 @@ function getTimeRangeHours(timeRange) {
 function getCustomTimes(data) {
   return {
     start: data[STORAGE_KEYS.CUSTOM_TIME_START] || "09:00",
-    end: data[STORAGE_KEYS.CUSTOM_TIME_END] || "10:00"
+    end: data[STORAGE_KEYS.CUSTOM_TIME_END] || "10:00",
+    exact: data[STORAGE_KEYS.EXACT_TIME] || "12:00"
   };
 }
 
@@ -575,6 +593,17 @@ async function recordClick(tabId) {
     [STORAGE_KEYS.WEEK_CLICKS]: weekClicks,
     [STORAGE_KEYS.WEEK_START_DATE]: currentWeekStart
   });
+
+  const isAutoClick = tabId && pendingTab && tabId === getPendingAutoClickTabId(pendingTab);
+  if (isAutoClick) {
+    chrome.notifications.create({
+      type: "basic",
+      iconUrl: "icons/icon128.png",
+      title: "Click to Help Palestine",
+      message: "Daily auto-click successful! Thank you for your support.",
+      priority: 0
+    });
+  }
 
   closePendingAutoClickTab(tabId, pendingTab);
   setupAlarms();

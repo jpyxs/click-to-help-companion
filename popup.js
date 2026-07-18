@@ -20,8 +20,10 @@ const dom = {
   timeRangeSelect: document.getElementById("time-range-select"),
   timeRangeContainer: document.getElementById("time-range-container"),
   customTimeContainer: document.getElementById("custom-time-container"),
+  exactTimeContainer: document.getElementById("exact-time-container"),
   customTimeStart: document.getElementById("custom-time-start"),
   customTimeEnd: document.getElementById("custom-time-end"),
+  exactTimeInput: document.getElementById("exact-time-input"),
   customTimeHint: document.getElementById("custom-time-hint"),
   toggleNotifications: document.getElementById("toggle-notifications"),
   reminderHourSelect: document.getElementById("reminder-hour-select"),
@@ -80,6 +82,7 @@ const state = {
   lastClickDate: "",
   autoClick: false,
   timeRange: "morning",
+  exactTime: "12:00",
   notifications: true,
   customTimeStart: "09:00",
   customTimeEnd: "10:00",
@@ -99,6 +102,7 @@ async function loadState() {
   state.todayClicks = data[STORAGE_KEYS.TODAY_CLICKS] || 0;
   state.autoClick = data[STORAGE_KEYS.AUTO_CLICK] || false;
   state.timeRange = data[STORAGE_KEYS.TIME_RANGE] || "morning";
+  state.exactTime = data[STORAGE_KEYS.EXACT_TIME] || "12:00";
   state.notifications = data[STORAGE_KEYS.NOTIFICATIONS] !== undefined
     ? data[STORAGE_KEYS.NOTIFICATIONS]
     : true;
@@ -154,6 +158,7 @@ async function persistState() {
     [STORAGE_KEYS.TODAY_DATE]: state.todayDate,
     [STORAGE_KEYS.AUTO_CLICK]: state.autoClick,
     [STORAGE_KEYS.TIME_RANGE]: state.timeRange,
+    [STORAGE_KEYS.EXACT_TIME]: state.exactTime,
     [STORAGE_KEYS.NOTIFICATIONS]: state.notifications,
     [STORAGE_KEYS.CUSTOM_TIME_START]: state.customTimeStart,
     [STORAGE_KEYS.CUSTOM_TIME_END]: state.customTimeEnd,
@@ -331,6 +336,7 @@ function render() {
 
   dom.toggleAutoclick.checked = state.autoClick;
   dom.timeRangeSelect.value = state.timeRange;
+  dom.exactTimeInput.value = state.exactTime;
   dom.toggleNotifications.checked = state.notifications;
   dom.reminderHourSelect.value = String(state.reminderHour);
 
@@ -482,8 +488,8 @@ dom.toggleAutoclick.addEventListener("change", () => {
   notifyBackground("AUTO_CLICK_CHANGED");
 });
 
-dom.timeRangeSelect.addEventListener("change", () => {
-  state.timeRange = dom.timeRangeSelect.value;
+dom.timeRangeSelect.addEventListener("change", (e) => {
+  state.timeRange = e.target.value;
   updateCustomTimeVisibility();
   persistState();
   notifyBackground("AUTO_CLICK_CHANGED");
@@ -492,7 +498,8 @@ dom.timeRangeSelect.addEventListener("change", () => {
 /** Shows/hides the custom time inputs depending on the selected time range. */
 function updateCustomTimeVisibility() {
   const isCustom = state.timeRange === "custom";
-  dom.customTimeContainer.classList.toggle("visible", isCustom);
+  dom.customTimeContainer.classList.toggle("visible", state.autoClick && isCustom);
+  dom.exactTimeContainer.classList.toggle("visible", state.autoClick && state.timeRange === "exact");
   if (isCustom) validateCustomTimes();
   else dom.customTimeHint.textContent = "";
 }
@@ -516,6 +523,12 @@ async function saveCustomTimes() {
   await persistState();
   notifyBackground("AUTO_CLICK_CHANGED");
 }
+
+dom.exactTimeInput.addEventListener("change", (e) => {
+  state.exactTime = e.target.value;
+  persistState();
+  notifyBackground("AUTO_CLICK_CHANGED");
+});
 
 dom.customTimeStart.addEventListener("change", saveCustomTimes);
 dom.customTimeEnd.addEventListener("change", saveCustomTimes);
