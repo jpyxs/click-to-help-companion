@@ -4,7 +4,6 @@ import { CAMPAIGN_URL, ALARM_AUTO_CLICK, STORAGE_KEYS, getTodayString, getWeekSt
 
 const STREAK_CIRCUMFERENCE = 2 * Math.PI * 52;
 const MAX_STREAK_DISPLAY = 30;
-const MILESTONE_STREAKS = new Set([7, 14, 30]);
 
 /* --- DOM References --- */
 
@@ -192,7 +191,29 @@ function getMidnightCountdown() {
 let _milestoneToastTimer = null;
 let _milestoneRingTimer = null;
 
+function spawnConfetti() {
+  const container = document.createElement("div");
+  container.className = "confetti-container";
+  document.body.appendChild(container);
+
+  const colors = ["var(--flag-black)", "var(--flag-white)", "var(--flag-green)", "var(--flag-red)"];
+  for (let i = 0; i < 50; i++) {
+    const confetti = document.createElement("div");
+    confetti.className = "confetti";
+    confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+    confetti.style.left = Math.random() * 100 + "vw";
+    confetti.style.animationDuration = (Math.random() * 2 + 2) + "s";
+    confetti.style.animationDelay = Math.random() * 0.5 + "s";
+    container.appendChild(confetti);
+  }
+
+  setTimeout(() => {
+    container.remove();
+  }, 4000);
+}
+
 function showMilestoneCelebration(streak) {
+  spawnConfetti();
   const ringEl = dom.streakProgress.closest(".streak-ring");
 
   if (dom.milestoneToast) {
@@ -258,7 +279,7 @@ function updateStatusBar() {
     if (_prevClickedToday === false) {
       dom.statusBar.classList.add("just-completed");
       setTimeout(() => dom.statusBar.classList.remove("just-completed"), 950);
-      if (MILESTONE_STREAKS.has(state.streak)) {
+      if (state.streak > 0 && state.streak % 7 === 0) {
         showMilestoneCelebration(state.streak);
       }
     }
