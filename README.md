@@ -100,13 +100,7 @@ The default shortcut is `Alt+Shift+C`. You can customise it at `chrome://extensi
 
 ## For contributors
 
-The extension is intentionally plain: no build step, no framework, and no remote runtime assets. The main files are:
-
-- `manifest.json` for the extension configuration
-- `popup.html`, `popup.css`, and `popup.js` for the toolbar popup
-- `background.js` for alarms, reminders, and confirmed click recording
-- `content.js` for the Arab.org campaign page interaction
-- `shared.js` for constants shared between the background and popup
+Please see [CONTRIBUTING.md](CONTRIBUTING.md) for details on how to set up the project, the file structure, and how to submit pull requests.
 
 This project is not affiliated with or endorsed by Arab.org.
 
