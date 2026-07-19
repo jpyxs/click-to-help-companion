@@ -1,37 +1,35 @@
 {
   "manifest_version": 3,
   "name": "Click to Help Companion",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "Helps automate and track confirmed daily clicks for Arab.org's Click-to-Help Palestine campaign.",
-
   "permissions": [
     "storage",
     "alarms",
     "notifications"
   ],
-
   "host_permissions": [
     "https://arab.org/*"
   ],
-
   "action": {
     "default_popup": "popup.html",
     "default_title": "Click to Help Companion"
   },
-
   "background": {
     "service_worker": "background.js",
     "type": "module"
   },
-
   "content_scripts": [
     {
-      "matches": ["https://arab.org/click-to-help/*"],
-      "js": ["content.js"],
+      "matches": [
+        "https://arab.org/click-to-help/*"
+      ],
+      "js": [
+        "content.js"
+      ],
       "run_at": "document_idle"
     }
   ],
-
   "commands": {
     "trigger-click": {
       "suggested_key": {
@@ -41,7 +39,6 @@
       "description": "Open the Click to Help Palestine campaign"
     }
   },
-
   "icons": {
     "16": "icons/icon-16.png",
     "48": "icons/icon-48.png",

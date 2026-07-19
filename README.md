@@ -22,8 +22,8 @@ The extension only counts a click after the campaign reaches the thank-you page.
 - **Streak milestone ring** - The ring turns gold when your streak reaches 30 days.
 - **Optional auto-click** - Choose a daily time window and let the extension open the campaign in the background.
 - **Same-day catch-up** - If your browser was closed during your chosen window, the extension can try again when you open it later that day.
-- **Reminder notifications** - Get a reminder at your chosen time if today's click has not been confirmed.
-- **At-risk countdown** - When the reminder hour passes without a click, the status bar shows a live countdown to midnight.
+- **Reminder notifications** - Get a reminder if today's click has not been confirmed. Reminders start after your auto-click window closes (if auto-click is on) or at 6 PM otherwise, and repeat every 2 hours until you click or midnight.
+- **At-risk countdown** - After 8 PM without a click, the status bar shows a live countdown to midnight.
 - **Keyboard shortcut** - Press `Alt+Shift+C` from anywhere in the browser to trigger the campaign tab without opening the popup.
 - **Milestone celebrations** - A toast and ring glow animation appear when your streak hits 7, 14, or 30 days.
 
@@ -56,7 +56,7 @@ To use auto-click, turn on **Auto-Click Daily** and choose a time window. The ex
 
 If your browser was closed during that window, the extension checks when it starts again. When the window has already passed and today's click is still unconfirmed, it opens a same-day catch-up attempt instead of silently waiting until tomorrow.
 
-To use reminders, leave **Notifications** enabled and choose your reminder time. If no click has been confirmed by that time, your browser will show a reminder. Once the reminder time passes, the popup status bar switches to an at-risk countdown showing how long you have until midnight.
+To use reminders, leave **Notifications** enabled. If no click has been confirmed by the relevant time, your browser will show a notification. When auto-click is on, reminders begin after your chosen time window closes. When auto-click is off, the first reminder fires at 6 PM. Either way, reminders repeat every 2 hours until the click is confirmed or the day ends. After 8 PM, the popup status bar switches to an at-risk countdown showing how long you have until midnight.
 
 ## How confirmation works
 

@@ -335,7 +335,6 @@ function render() {
   dom.toggleNotifications.checked = state.notifications;
 
   dom.timeRangeContainer.classList.toggle("visible", state.autoClick);
-  // reminder-hour selector removed; notifications section is always simple on/off
 
   dom.customTimeStart.value = state.customTimeStart;
   dom.customTimeEnd.value = state.customTimeEnd;

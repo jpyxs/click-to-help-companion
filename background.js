@@ -111,11 +111,6 @@ async function runStorageMigrations() {
     }
   }
 
-  if (from < 2) {
-    // v1 → v2: REMINDER_HOUR added in v1.3.0 (now removed)
-    // nothing to do — we'll clean it up in v4 below
-  }
-
   if (from < 3) {
     // v2 → v3: WEEK_CLICKS + WEEK_START_DATE added in v1.3.0
     const existing = await storageGet([STORAGE_KEYS.WEEK_CLICKS, STORAGE_KEYS.WEEK_START_DATE]);
