@@ -23,6 +23,17 @@ jobs:
         id: version
         run: echo "version=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
 
+      - name: Extract changelog section
+        id: changelog
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          BODY=$(awk "/^## \[$VERSION\]/{found=1; next} /^## \[/{if(found) exit} found" CHANGELOG.md)
+          {
+            echo "body<<EOF"
+            echo "$BODY"
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
+
       - name: Update popup.html footer version
         run: |
           sed -i 's|<span class="footer-version">v[^<]*</span>|<span class="footer-version">v${{ steps.version.outputs.version }}</span>|' popup.html
@@ -37,19 +48,20 @@ jobs:
 
       - name: Build extension zip
         run: |
-          zip -r click-to-help-companion-v${{ steps.version.outputs.version }}.zip . \
-            --exclude ".git/*" \
-            --exclude ".github/*" \
-            --exclude ".agents/*" \
-            --exclude ".codex/*" \
-            --exclude ".gitattributes" \
-            --exclude "README.md" \
-            --exclude "CONTRIBUTING.md" \
-            --exclude "LICENSE"
+          zip -r click-to-help-companion-v${{ steps.version.outputs.version }}.zip \
+            manifest.json \
+            background.js \
+            content.js \
+            popup.html \
+            popup.css \
+            popup.js \
+            shared.js \
+            icons/ \
+            fonts/*.ttf
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
+          body: ${{ steps.changelog.outputs.body }}
           files: click-to-help-companion-v${{ steps.version.outputs.version }}.zip
-          generate_release_notes: true
