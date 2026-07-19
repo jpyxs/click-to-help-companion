@@ -7,7 +7,10 @@ const ALARM_REMINDER = "daily-reminder";
 const PENDING_AUTO_CLICK_TAB = "_pendingAutoClickTab";
 const PENDING_AUTO_CLICK_TIMEOUT_MINUTES = 5;
 const MIN_ALARM_DELAY_MINUTES = 0.1;
-const CURRENT_STORAGE_VERSION = 3;
+const CURRENT_STORAGE_VERSION = 4;
+const REMINDER_INTERVAL_MINUTES = 120;          // 2 h between reminders
+const REMINDER_MIN_GAP_MINUTES = 90;            // dedup guard: ignore if <90 min since last
+const REMINDER_START_HOUR_NO_AUTOCLICK = 18;   // 6 PM when auto-click is OFF
 
 /* --- Promise Wrappers --- */
 
@@ -65,9 +68,9 @@ chrome.runtime.onInstalled.addListener(async (details) => {
     [STORAGE_KEYS.TIME_RANGE]: "morning",
     [STORAGE_KEYS.NOTIFICATIONS]: true,
     [STORAGE_KEYS.LAST_REMINDER_DATE]: "",
+    [STORAGE_KEYS.LAST_REMINDER_TIME]: 0,
     [STORAGE_KEYS.CUSTOM_TIME_START]: "09:00",
     [STORAGE_KEYS.CUSTOM_TIME_END]: "10:00",
-    [STORAGE_KEYS.REMINDER_HOUR]: 18,
     [STORAGE_KEYS.WEEK_CLICKS]: 0,
     [STORAGE_KEYS.WEEK_START_DATE]: ""
   };
@@ -109,11 +112,8 @@ async function runStorageMigrations() {
   }
 
   if (from < 2) {
-    // v1 → v2: REMINDER_HOUR added in v1.3.0
-    const existing = await storageGet(STORAGE_KEYS.REMINDER_HOUR);
-    if (existing[STORAGE_KEYS.REMINDER_HOUR] === undefined) {
-      await storageSet({ [STORAGE_KEYS.REMINDER_HOUR]: 18 });
-    }
+    // v1 → v2: REMINDER_HOUR added in v1.3.0 (now removed)
+    // nothing to do — we'll clean it up in v4 below
   }
 
   if (from < 3) {
@@ -123,6 +123,15 @@ async function runStorageMigrations() {
     if (existing[STORAGE_KEYS.WEEK_CLICKS] === undefined) updates[STORAGE_KEYS.WEEK_CLICKS] = 0;
     if (existing[STORAGE_KEYS.WEEK_START_DATE] === undefined) updates[STORAGE_KEYS.WEEK_START_DATE] = "";
     if (Object.keys(updates).length) await storageSet(updates);
+  }
+
+  if (from < 4) {
+    // v3 → v4: REMINDER_HOUR removed; LAST_REMINDER_TIME added
+    await new Promise(r => chrome.storage.sync.remove("reminderHour", r));
+    const existing = await storageGet(STORAGE_KEYS.LAST_REMINDER_TIME);
+    if (existing[STORAGE_KEYS.LAST_REMINDER_TIME] === undefined) {
+      await storageSet({ [STORAGE_KEYS.LAST_REMINDER_TIME]: 0 });
+    }
   }
 
   await storageSet({ storageVersion: CURRENT_STORAGE_VERSION });
@@ -146,11 +155,10 @@ async function setupAlarms() {
     STORAGE_KEYS.TODAY_DATE,
     STORAGE_KEYS.CUSTOM_TIME_START,
     STORAGE_KEYS.CUSTOM_TIME_END,
-    STORAGE_KEYS.REMINDER_HOUR,
+    STORAGE_KEYS.LAST_REMINDER_TIME,
     PENDING_AUTO_CLICK_TAB
   ]);
 
-  const reminderHour = data[STORAGE_KEYS.REMINDER_HOUR] ?? 18;
   let openedCatchUpTab = false;
 
   if (data[STORAGE_KEYS.AUTO_CLICK]) {
@@ -166,9 +174,9 @@ async function setupAlarms() {
   }
 
   if (data[STORAGE_KEYS.NOTIFICATIONS]) {
-    scheduleAlarm(ALARM_REMINDER, reminderHour);
+    scheduleNextReminder(data);
     if (!openedCatchUpTab) {
-      handleMissedReminder(reminderHour);
+      handleMissedReminder(data);
     }
   } else {
     await alarmsClear(ALARM_REMINDER);
@@ -214,14 +222,19 @@ async function setupAutoClickAlarm() {
 async function setupReminderAlarm() {
   const data = await storageGet([
     STORAGE_KEYS.NOTIFICATIONS,
-    STORAGE_KEYS.REMINDER_HOUR
+    STORAGE_KEYS.AUTO_CLICK,
+    STORAGE_KEYS.TIME_RANGE,
+    STORAGE_KEYS.EXACT_TIME,
+    STORAGE_KEYS.TODAY_CLICKS,
+    STORAGE_KEYS.TODAY_DATE,
+    STORAGE_KEYS.CUSTOM_TIME_START,
+    STORAGE_KEYS.CUSTOM_TIME_END,
+    STORAGE_KEYS.LAST_REMINDER_TIME
   ]);
 
-  const reminderHour = data[STORAGE_KEYS.REMINDER_HOUR] ?? 18;
-
   if (data[STORAGE_KEYS.NOTIFICATIONS]) {
-    scheduleAlarm(ALARM_REMINDER, reminderHour);
-    handleMissedReminder(reminderHour);
+    scheduleNextReminder(data);
+    handleMissedReminder(data);
   } else {
     await alarmsClear(ALARM_REMINDER);
   }
@@ -318,22 +331,87 @@ function randomDateBetween(start, end) {
   return new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
 }
 
-async function scheduleAlarm(name, targetHour) {
-  const now = new Date();
-  const target = new Date();
-  target.setHours(targetHour, 0, 0, 0);
+/**
+ * Computes when the first reminder should fire for the current day.
+ * - Auto-click ON: after the auto-click window/exact-time end (the "missed" moment)
+ * - Auto-click OFF: at REMINDER_START_HOUR_NO_AUTOCLICK (6 PM)
+ * Returns a Date object (may be in the past if the window already passed).
+ */
+function getReminderStartTime(data) {
+  const autoClickOn = data[STORAGE_KEYS.AUTO_CLICK];
 
-  if (target <= now) {
-    target.setDate(target.getDate() + 1);
+  if (autoClickOn) {
+    const customTimes = getCustomTimes(data);
+    const timeRange = data[STORAGE_KEYS.TIME_RANGE] || "morning";
+    const window = getTimeRangeWindow(timeRange, new Date(), customTimes);
+    return window.end; // remind after the window ends
   }
 
-  const delayMinutes = (target.getTime() - now.getTime()) / (1000 * 60);
+  const start = new Date();
+  start.setHours(REMINDER_START_HOUR_NO_AUTOCLICK, 0, 0, 0);
+  return start;
+}
 
-  await alarmsClear(name);
-  chrome.alarms.create(name, {
-    delayInMinutes: delayMinutes,
-    periodInMinutes: 24 * 60
-  });
+/**
+ * Schedules (or re-arms) the periodic reminder alarm.
+ * Computes the next fire time based on:
+ *   - When reminders are eligible to start (getReminderStartTime)
+ *   - The last reminder sent (LAST_REMINDER_TIME)
+ *   - The 2-hour interval between reminders
+ * Does nothing if the user has already clicked today.
+ */
+async function scheduleNextReminder(data) {
+  const today = getTodayString();
+  if (hasClickedToday(data, today)) {
+    await alarmsClear(ALARM_REMINDER);
+    return;
+  }
+
+  const now = new Date();
+  const midnight = new Date(now);
+  midnight.setHours(24, 0, 0, 0);
+
+  const reminderStart = getReminderStartTime(data);
+  const lastReminderTime = data[STORAGE_KEYS.LAST_REMINDER_TIME] || 0;
+
+  // The earliest the next reminder can fire:
+  // max(reminderStart, lastReminderTime + interval)
+  const afterInterval = new Date(lastReminderTime + REMINDER_INTERVAL_MINUTES * 60 * 1000);
+  const nextFire = new Date(Math.max(reminderStart.getTime(), afterInterval.getTime()));
+
+  if (nextFire >= midnight) {
+    // Nothing left to do today
+    await alarmsClear(ALARM_REMINDER);
+    return;
+  }
+
+  const delayMs = Math.max(nextFire.getTime() - now.getTime(), MIN_ALARM_DELAY_MINUTES * 60 * 1000);
+  const delayMinutes = delayMs / (1000 * 60);
+
+  await alarmsClear(ALARM_REMINDER);
+  chrome.alarms.create(ALARM_REMINDER, { delayInMinutes: delayMinutes });
+}
+
+/**
+ * Called on startup/install to fire a reminder immediately if we've already
+ * passed the reminder start time and haven't sent one recently.
+ */
+async function handleMissedReminder(data) {
+  const today = getTodayString();
+  if (hasClickedToday(data, today)) return;
+  if (!data[STORAGE_KEYS.NOTIFICATIONS]) return;
+
+  const now = new Date();
+  const reminderStart = getReminderStartTime(data);
+  if (now < reminderStart) return; // window hasn't opened yet
+
+  const lastReminderTime = data[STORAGE_KEYS.LAST_REMINDER_TIME] || 0;
+  const minsSinceLast = (now.getTime() - lastReminderTime) / (1000 * 60);
+  if (minsSinceLast < REMINDER_MIN_GAP_MINUTES) return; // sent one recently
+
+  // Send immediately
+  await sendReminderNotification();
+  await storageSet({ [STORAGE_KEYS.LAST_REMINDER_TIME]: now.getTime() });
 }
 
 async function handleMissedAutoClickWindow(data) {
@@ -359,11 +437,6 @@ async function handleMissedAutoClickWindow(data) {
 
   openAutoClickTab();
   return true;
-}
-
-function handleMissedReminder(reminderHour) {
-  if (new Date().getHours() < reminderHour) return;
-  handleReminder();
 }
 
 /* --- Alarm Handlers --- */
@@ -477,25 +550,58 @@ async function handleReminder() {
     STORAGE_KEYS.NOTIFICATIONS,
     STORAGE_KEYS.TODAY_CLICKS,
     STORAGE_KEYS.TODAY_DATE,
-    STORAGE_KEYS.LAST_REMINDER_DATE
+    STORAGE_KEYS.LAST_REMINDER_DATE,
+    STORAGE_KEYS.LAST_REMINDER_TIME,
+    STORAGE_KEYS.AUTO_CLICK,
+    STORAGE_KEYS.TIME_RANGE,
+    STORAGE_KEYS.EXACT_TIME,
+    STORAGE_KEYS.CUSTOM_TIME_START,
+    STORAGE_KEYS.CUSTOM_TIME_END
   ]);
 
   if (!data[STORAGE_KEYS.NOTIFICATIONS]) return;
 
   const today = getTodayString();
   const alreadyClicked = hasClickedToday(data, today);
+  if (alreadyClicked) {
+    await alarmsClear(ALARM_REMINDER);
+    return;
+  }
 
-  if (alreadyClicked) return;
-  if (data[STORAGE_KEYS.LAST_REMINDER_DATE] === today) return;
+  // Dedup: don't send if we've sent one within the minimum gap
+  const now = new Date();
+  const lastReminderTime = data[STORAGE_KEYS.LAST_REMINDER_TIME] || 0;
+  const minsSinceLast = (now.getTime() - lastReminderTime) / (1000 * 60);
+  if (minsSinceLast < REMINDER_MIN_GAP_MINUTES) {
+    // Too soon — re-arm for the correct next slot and exit
+    scheduleNextReminder(data);
+    return;
+  }
 
-  // Write date first to prevent a concurrent setupAlarms() from firing a duplicate.
-  await storageSet({ [STORAGE_KEYS.LAST_REMINDER_DATE]: today });
-  chrome.notifications.create("click-reminder", {
-    type: "basic",
-    iconUrl: "icons/icon-128.png",
-    title: "Click to Help Palestine",
-    message: "You haven't clicked today. Keep your streak alive!",
-    priority: 2
+  // Write timestamp first to prevent concurrent duplicates
+  await storageSet({
+    [STORAGE_KEYS.LAST_REMINDER_DATE]: today,
+    [STORAGE_KEYS.LAST_REMINDER_TIME]: now.getTime()
+  });
+
+  await sendReminderNotification();
+
+  // Re-arm for the next 2-hour slot
+  scheduleNextReminder({
+    ...data,
+    [STORAGE_KEYS.LAST_REMINDER_TIME]: now.getTime()
+  });
+}
+
+function sendReminderNotification() {
+  return new Promise((resolve) => {
+    chrome.notifications.create("click-reminder", {
+      type: "basic",
+      iconUrl: "icons/icon-128.png",
+      title: "Click to Help Palestine",
+      message: "You haven't clicked today. Keep your streak alive!",
+      priority: 2
+    }, resolve);
   });
 }
 

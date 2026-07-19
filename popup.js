@@ -26,8 +26,6 @@ const dom = {
   exactTimeInput: document.getElementById("exact-time-input"),
   customTimeHint: document.getElementById("custom-time-hint"),
   toggleNotifications: document.getElementById("toggle-notifications"),
-  reminderHourSelect: document.getElementById("reminder-hour-select"),
-  reminderHourContainer: document.getElementById("reminder-hour-container"),
   streakProgress: document.querySelector(".streak-progress"),
   countdownRow: document.getElementById("countdown-row"),
   countdownText: document.getElementById("countdown-text"),
@@ -86,7 +84,6 @@ const state = {
   notifications: true,
   customTimeStart: "09:00",
   customTimeEnd: "10:00",
-  reminderHour: 18,
   weekClicks: 0,
   weekStartDate: ""
 };
@@ -108,7 +105,6 @@ async function loadState() {
     : true;
   state.customTimeStart = data[STORAGE_KEYS.CUSTOM_TIME_START] || "09:00";
   state.customTimeEnd = data[STORAGE_KEYS.CUSTOM_TIME_END] || "10:00";
-  state.reminderHour = data[STORAGE_KEYS.REMINDER_HOUR] ?? 18;
   state.weekClicks = data[STORAGE_KEYS.WEEK_CLICKS] || 0;
   state.weekStartDate = data[STORAGE_KEYS.WEEK_START_DATE] || "";
 
@@ -162,7 +158,6 @@ async function persistState() {
     [STORAGE_KEYS.NOTIFICATIONS]: state.notifications,
     [STORAGE_KEYS.CUSTOM_TIME_START]: state.customTimeStart,
     [STORAGE_KEYS.CUSTOM_TIME_END]: state.customTimeEnd,
-    [STORAGE_KEYS.REMINDER_HOUR]: state.reminderHour,
     [STORAGE_KEYS.WEEK_CLICKS]: state.weekClicks,
     [STORAGE_KEYS.WEEK_START_DATE]: state.weekStartDate
   });
@@ -295,7 +290,7 @@ function updateStatusBar() {
     dom.btnClick.textContent = "Done for Today";
   } else {
     dom.statusBar.classList.remove("completed", "just-completed");
-    const atRisk = new Date().getHours() >= state.reminderHour;
+    const atRisk = new Date().getHours() >= 20; // at-risk after 8 PM
     dom.statusBar.classList.toggle("at-risk", atRisk);
     dom.statusIcon.innerHTML = "!";
 
@@ -338,10 +333,9 @@ function render() {
   dom.timeRangeSelect.value = state.timeRange;
   dom.exactTimeInput.value = state.exactTime;
   dom.toggleNotifications.checked = state.notifications;
-  dom.reminderHourSelect.value = String(state.reminderHour);
 
   dom.timeRangeContainer.classList.toggle("visible", state.autoClick);
-  dom.reminderHourContainer.classList.toggle("visible", state.notifications);
+  // reminder-hour selector removed; notifications section is always simple on/off
 
   dom.customTimeStart.value = state.customTimeStart;
   dom.customTimeEnd.value = state.customTimeEnd;
@@ -540,13 +534,6 @@ dom.customTimeEnd.addEventListener("change", saveCustomTimes);
 
 dom.toggleNotifications.addEventListener("change", () => {
   state.notifications = dom.toggleNotifications.checked;
-  persistState();
-  dom.reminderHourContainer.classList.toggle("visible", state.notifications);
-  notifyBackground("NOTIFICATIONS_CHANGED");
-});
-
-dom.reminderHourSelect.addEventListener("change", () => {
-  state.reminderHour = Number(dom.reminderHourSelect.value);
   persistState();
   notifyBackground("NOTIFICATIONS_CHANGED");
 });

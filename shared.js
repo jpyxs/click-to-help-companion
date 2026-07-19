@@ -16,9 +16,9 @@ export const STORAGE_KEYS = {
   TIME_RANGE: "timeRange",
   NOTIFICATIONS: "notifications",
   LAST_REMINDER_DATE: "lastReminderDate",
+  LAST_REMINDER_TIME: "lastReminderTime",
   CUSTOM_TIME_START: "customTimeStart",
   CUSTOM_TIME_END: "customTimeEnd",
-  REMINDER_HOUR: "reminderHour",
   WEEK_CLICKS: "weekClicks",
   WEEK_START_DATE: "weekStartDate",
   EXACT_TIME: "exactTime"
