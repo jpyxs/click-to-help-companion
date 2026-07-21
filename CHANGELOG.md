@@ -3,6 +3,13 @@
 All notable changes to this project are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+<!-- 
+  NOTE FOR RELEASES:
+  List all ongoing changes directly under the ## [Unreleased] section.
+  Do NOT manually add version headings (e.g. ## [X.Y.Z]); the GitHub Actions release workflow
+  automatically stamps ## [Unreleased] into ## [X.Y.Z] - YYYY-MM-DD when a version tag (vX.Y.Z) is pushed.
+-->
+
 ---
 
 ## [Unreleased]
