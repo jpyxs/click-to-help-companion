@@ -37,35 +37,13 @@ const dom = {
 
 function loadStorage(keys) {
   return new Promise((resolve) => {
-    if (typeof chrome !== "undefined" && chrome.storage && chrome.storage.sync) {
-      chrome.storage.sync.get(keys, resolve);
-    } else {
-      const result = {};
-      keys.forEach((key) => {
-        const value = localStorage.getItem(key);
-        if (value !== null) {
-          try {
-            result[key] = JSON.parse(value);
-          } catch {
-            result[key] = value;
-          }
-        }
-      });
-      resolve(result);
-    }
+    chrome.storage.sync.get(keys, resolve);
   });
 }
 
 function saveStorage(data) {
   return new Promise((resolve) => {
-    if (typeof chrome !== "undefined" && chrome.storage && chrome.storage.sync) {
-      chrome.storage.sync.set(data, resolve);
-    } else {
-      Object.entries(data).forEach(([key, value]) => {
-        localStorage.setItem(key, JSON.stringify(value));
-      });
-      resolve();
-    }
+    chrome.storage.sync.set(data, resolve);
   });
 }
 

@@ -1,205 +1,212 @@
-/* --- Configuration --- */
+(function () {
+  if (window.__cthCompanionInjected) {
+    return;
+  }
+  window.__cthCompanionInjected = true;
 
-const CLICK_BUTTON_SELECTORS = [
-  "div.clickable img.img_pointer",
-  "div.clickable img[onclick]",
-  "img.img_pointer",
-  "img[onclick*='make_vote']",
-  "div.clickable",
-  ".button_palestine",
-  "button.click-to-help-btn",
-  "button.cth-btn",
-  "#click-to-help-button",
-  "[data-action='click-to-help']"
-];
+  /* --- Configuration --- */
 
-const THANK_YOU_PATH = "/click-to-help/palestine/thank-you";
-const MAX_ATTEMPTS = 15;
-const RETRY_INTERVAL_MS = 2000;
+  const CLICK_BUTTON_SELECTORS = [
+    "div.clickable img.img_pointer",
+    "div.clickable img[onclick]",
+    "img.img_pointer",
+    "img[onclick*='make_vote']",
+    "div.clickable",
+    ".button_palestine",
+    "button.click-to-help-btn",
+    "button.cth-btn",
+    "#click-to-help-button",
+    "[data-action='click-to-help']"
+  ];
 
-/* --- State --- */
+  const THANK_YOU_PATH = "/click-to-help/palestine/thank-you";
+  const MAX_ATTEMPTS = 15;
+  const RETRY_INTERVAL_MS = 2000;
 
-let attemptCount = 0;
+  /* --- State --- */
 
-/* --- Button Detection --- */
+  let attemptCount = 0;
 
-function findClickButton() {
-  for (const selector of CLICK_BUTTON_SELECTORS) {
-    const element = document.querySelector(selector);
-    if (element && isVisible(element) && !isDisabled(element)) {
-      return element;
+  /* --- Button Detection --- */
+
+  function findClickButton() {
+    for (const selector of CLICK_BUTTON_SELECTORS) {
+      const element = document.querySelector(selector);
+      if (element && isVisible(element) && !isDisabled(element)) {
+        return element;
+      }
+    }
+
+    const fallbackElements = document.querySelectorAll(
+      "button, a.btn, a[role='button'], div.clickable, img[onclick]"
+    );
+    for (const el of fallbackElements) {
+      const text = (el.textContent || el.title || el.alt || "").toLowerCase().trim();
+      if (
+        (text.includes("click") && text.includes("help")) ||
+        (text.includes("click") && text.includes("donate")) ||
+        (text.includes("you click") && text.includes("donate")) ||
+        text === "click" ||
+        text === "click to help"
+      ) {
+        if (isVisible(el)) {
+          return el;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  function isVisible(element) {
+    const style = window.getComputedStyle(element);
+    return (
+      style.display !== "none" &&
+      style.visibility !== "hidden" &&
+      style.opacity !== "0" &&
+      element.offsetParent !== null
+    );
+  }
+
+  function isDisabled(element) {
+    return (
+      element.disabled === true ||
+      element.getAttribute("aria-disabled") === "true" ||
+      element.classList.contains("disabled")
+    );
+  }
+
+  /* --- Click Execution --- */
+
+  function performClick(button) {
+    button.scrollIntoView({ behavior: "smooth", block: "center" });
+
+    const rect = button.getBoundingClientRect();
+    const clientX = rect.left + rect.width / 2 + (Math.random() * 4 - 2);
+    const clientY = rect.top + rect.height / 2 + (Math.random() * 4 - 2);
+
+    const commonProps = {
+      bubbles: true,
+      cancelable: true,
+      view: window,
+      clientX: clientX,
+      clientY: clientY
+    };
+
+    setTimeout(() => {
+      button.dispatchEvent(new MouseEvent("mouseover", commonProps));
+    }, randomDelay(50, 120));
+
+    setTimeout(() => {
+      button.dispatchEvent(new MouseEvent("mousedown", { ...commonProps, button: 0 }));
+    }, randomDelay(150, 280));
+
+    setTimeout(() => {
+      button.dispatchEvent(new MouseEvent("mouseup", { ...commonProps, button: 0 }));
+      button.dispatchEvent(new MouseEvent("click", { ...commonProps, button: 0 }));
+    }, randomDelay(300, 500));
+  }
+
+  function notifyClickConfirmed() {
+    chrome.runtime.sendMessage({ type: "CLICK_CONFIRMED" }, () => {
+      if (chrome.runtime.lastError) {
+        return;
+      }
+    });
+  }
+
+  /* --- Retry Loop --- */
+
+  let _observer = null;
+
+  function attemptClick() {
+    const button = findClickButton();
+
+    if (button) {
+      stopWatching();
+      performClick(button);
+      return;
+    }
+
+    attemptCount++;
+
+    if (attemptCount >= MAX_ATTEMPTS) {
+      watchForButton();
+      return;
+    }
+
+    setTimeout(attemptClick, RETRY_INTERVAL_MS);
+  }
+
+  function watchForButton() {
+    if (_observer || !document.body) return;
+    _observer = new MutationObserver(() => {
+      const button = findClickButton();
+      if (button) {
+        stopWatching();
+        performClick(button);
+      }
+    });
+    _observer.observe(document.body, { childList: true, subtree: true });
+  }
+
+  function stopWatching() {
+    if (_observer) {
+      _observer.disconnect();
+      _observer = null;
     }
   }
 
-  const fallbackElements = document.querySelectorAll(
-    "button, a.btn, a[role='button'], div.clickable, img[onclick]"
-  );
-  for (const el of fallbackElements) {
-    const text = (el.textContent || el.title || el.alt || "").toLowerCase().trim();
-    if (
-      (text.includes("click") && text.includes("help")) ||
-      (text.includes("click") && text.includes("donate")) ||
-      (text.includes("you click") && text.includes("donate")) ||
-      text === "click" ||
-      text === "click to help"
-    ) {
-      if (isVisible(el)) {
-        return el;
+  /* --- Utility --- */
+
+  function randomDelay(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+  }
+
+  /* --- Initialization --- */
+
+  const CAMPAIGN_PATH = "/click-to-help/palestine/";
+
+  /**
+   * Checks the current URL path and acts accordingly.
+   * Called on initial page load AND after any SPA navigation.
+   */
+  function checkCurrentPath() {
+    if (window.location.pathname.startsWith(THANK_YOU_PATH)) {
+      notifyClickConfirmed();
+    } else if (window.location.pathname.startsWith(CAMPAIGN_PATH)) {
+      // Only start the retry loop if it hasn't already run on this document.
+      if (attemptCount === 0 && !_observer) {
+        attemptClick();
       }
     }
   }
 
-  return null;
-}
+  /* --- SPA Navigation Detection --- */
 
-function isVisible(element) {
-  const style = window.getComputedStyle(element);
-  return (
-    style.display !== "none" &&
-    style.visibility !== "hidden" &&
-    style.opacity !== "0" &&
-    element.offsetParent !== null
-  );
-}
+  // Arab.org may navigate to the thank-you path via pushState/replaceState
+  // rather than a full page load. In that case document_idle never fires again,
+  // so we intercept the History API to catch those navigations.
 
-function isDisabled(element) {
-  return (
-    element.disabled === true ||
-    element.getAttribute("aria-disabled") === "true" ||
-    element.classList.contains("disabled")
-  );
-}
-
-/* --- Click Execution --- */
-
-function performClick(button) {
-  button.scrollIntoView({ behavior: "smooth", block: "center" });
-
-  const rect = button.getBoundingClientRect();
-  const clientX = rect.left + rect.width / 2 + (Math.random() * 4 - 2);
-  const clientY = rect.top + rect.height / 2 + (Math.random() * 4 - 2);
-
-  const commonProps = {
-    bubbles: true,
-    cancelable: true,
-    view: window,
-    clientX: clientX,
-    clientY: clientY
+  const _origPushState = history.pushState.bind(history);
+  history.pushState = function (...args) {
+    _origPushState(...args);
+    checkCurrentPath();
   };
 
-  setTimeout(() => {
-    button.dispatchEvent(new MouseEvent("mouseover", commonProps));
-  }, randomDelay(50, 120));
+  const _origReplaceState = history.replaceState.bind(history);
+  history.replaceState = function (...args) {
+    _origReplaceState(...args);
+    checkCurrentPath();
+  };
 
-  setTimeout(() => {
-    button.dispatchEvent(new MouseEvent("mousedown", { ...commonProps, button: 0 }));
-  }, randomDelay(150, 280));
+  window.addEventListener("popstate", checkCurrentPath);
 
-  setTimeout(() => {
-    button.dispatchEvent(new MouseEvent("mouseup", { ...commonProps, button: 0 }));
-    button.dispatchEvent(new MouseEvent("click", { ...commonProps, button: 0 }));
-  }, randomDelay(300, 500));
-}
+  /* --- Initial Page Load --- */
 
-function notifyClickConfirmed() {
-  chrome.runtime.sendMessage({ type: "CLICK_CONFIRMED" }, () => {
-    if (chrome.runtime.lastError) {
-      return;
-    }
-  });
-}
-
-/* --- Retry Loop --- */
-
-let _observer = null;
-
-function attemptClick() {
-  const button = findClickButton();
-
-  if (button) {
-    stopWatching();
-    performClick(button);
-    return;
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", checkCurrentPath);
+  } else {
+    checkCurrentPath();
   }
-
-  attemptCount++;
-
-  if (attemptCount >= MAX_ATTEMPTS) {
-    watchForButton();
-    return;
-  }
-
-  setTimeout(attemptClick, RETRY_INTERVAL_MS);
-}
-
-function watchForButton() {
-  if (_observer || !document.body) return;
-  _observer = new MutationObserver(() => {
-    const button = findClickButton();
-    if (button) {
-      stopWatching();
-      performClick(button);
-    }
-  });
-  _observer.observe(document.body, { childList: true, subtree: true });
-}
-
-function stopWatching() {
-  if (_observer) {
-    _observer.disconnect();
-    _observer = null;
-  }
-}
-
-/* --- Utility --- */
-
-function randomDelay(min, max) {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
-}
-
-/* --- Initialization --- */
-
-const CAMPAIGN_PATH = "/click-to-help/palestine/";
-
-/**
- * Checks the current URL path and acts accordingly.
- * Called on initial page load AND after any SPA navigation.
- */
-function checkCurrentPath() {
-  if (window.location.pathname.startsWith(THANK_YOU_PATH)) {
-    notifyClickConfirmed();
-  } else if (window.location.pathname.startsWith(CAMPAIGN_PATH)) {
-    // Only start the retry loop if it hasn't already run on this document.
-    if (attemptCount === 0 && !_observer) {
-      attemptClick();
-    }
-  }
-}
-
-/* --- SPA Navigation Detection --- */
-
-// Arab.org may navigate to the thank-you path via pushState/replaceState
-// rather than a full page load. In that case document_idle never fires again,
-// so we intercept the History API to catch those navigations.
-
-const _origPushState = history.pushState.bind(history);
-history.pushState = function (...args) {
-  _origPushState(...args);
-  checkCurrentPath();
-};
-
-const _origReplaceState = history.replaceState.bind(history);
-history.replaceState = function (...args) {
-  _origReplaceState(...args);
-  checkCurrentPath();
-};
-
-window.addEventListener("popstate", checkCurrentPath);
-
-/* --- Initial Page Load --- */
-
-if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", checkCurrentPath);
-} else {
-  checkCurrentPath();
-}
+})();

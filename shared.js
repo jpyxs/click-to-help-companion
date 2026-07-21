@@ -6,22 +6,22 @@ export const CAMPAIGN_URL = "https://arab.org/click-to-help/palestine/";
 export const ALARM_AUTO_CLICK = "daily-auto-click";
 
 export const STORAGE_KEYS = {
-  STREAK: "streak",
-  BEST_STREAK: "bestStreak",
-  TOTAL_CLICKS: "totalClicks",
-  LAST_CLICK_DATE: "lastClickDate",
-  TODAY_CLICKS: "todayClicks",
-  TODAY_DATE: "todayDate",
   AUTO_CLICK: "autoClick",
-  TIME_RANGE: "timeRange",
-  NOTIFICATIONS: "notifications",
+  BEST_STREAK: "bestStreak",
+  CUSTOM_TIME_END: "customTimeEnd",
+  CUSTOM_TIME_START: "customTimeStart",
+  EXACT_TIME: "exactTime",
+  LAST_CLICK_DATE: "lastClickDate",
   LAST_REMINDER_DATE: "lastReminderDate",
   LAST_REMINDER_TIME: "lastReminderTime",
-  CUSTOM_TIME_START: "customTimeStart",
-  CUSTOM_TIME_END: "customTimeEnd",
+  NOTIFICATIONS: "notifications",
+  STREAK: "streak",
+  TIME_RANGE: "timeRange",
+  TODAY_CLICKS: "todayClicks",
+  TODAY_DATE: "todayDate",
+  TOTAL_CLICKS: "totalClicks",
   WEEK_CLICKS: "weekClicks",
-  WEEK_START_DATE: "weekStartDate",
-  EXACT_TIME: "exactTime"
+  WEEK_START_DATE: "weekStartDate"
 };
 
 /** Returns today's date as "YYYY-MM-DD" in the local timezone. */

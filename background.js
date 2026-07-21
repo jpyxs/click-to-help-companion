@@ -41,20 +41,15 @@ function tabsRemove(tabId) {
 /* --- Lifecycle Events --- */
 
 chrome.runtime.onInstalled.addListener(async (details) => {
-  // Unpacked extension reloads sometimes trigger "install" and wipe data.
-  // We'll safely restore from local storage if local has their actual streak.
   const localData = await new Promise(r => chrome.storage.local.get(null, r));
   const syncData = await new Promise(r => chrome.storage.sync.get(null, r));
 
   const localStreak = localData[STORAGE_KEYS.STREAK] || 0;
   const syncStreak = syncData[STORAGE_KEYS.STREAK] || 0;
 
-  // If local has a higher streak, they lost data (e.g. 1 vs 25), so restore it!
   if (localStreak > syncStreak) {
     await new Promise(r => chrome.storage.sync.set(localData, r));
   }
-
-  // Only initialize missing defaults
   const currentData = await storageGet(null);
   const defaults = {
     storageVersion: CURRENT_STORAGE_VERSION,
@@ -86,12 +81,15 @@ chrome.runtime.onInstalled.addListener(async (details) => {
     await storageSet(toSet);
   }
 
-  await runStorageMigrations();
-  setupAlarms();
+  try {
+    await runStorageMigrations();
+  } catch (err) {
+    console.error("Storage migration error:", err);
+  }
+  await setupAlarms();
 });
 
 async function runStorageMigrations() {
-  // Migrate from local to sync if sync is empty but local has data
   const syncData = await new Promise(r => chrome.storage.sync.get(null, r));
   if (Object.keys(syncData).length === 0) {
     const localData = await new Promise(r => chrome.storage.local.get(null, r));
@@ -104,7 +102,6 @@ async function runStorageMigrations() {
   const from = storageVersion || 0;
 
   if (from < 1) {
-    // v0 → v1: LAST_REMINDER_DATE added in v1.1.0
     const existing = await storageGet(STORAGE_KEYS.LAST_REMINDER_DATE);
     if (existing[STORAGE_KEYS.LAST_REMINDER_DATE] === undefined) {
       await storageSet({ [STORAGE_KEYS.LAST_REMINDER_DATE]: "" });
@@ -112,7 +109,6 @@ async function runStorageMigrations() {
   }
 
   if (from < 3) {
-    // v2 → v3: WEEK_CLICKS + WEEK_START_DATE added in v1.3.0
     const existing = await storageGet([STORAGE_KEYS.WEEK_CLICKS, STORAGE_KEYS.WEEK_START_DATE]);
     const updates = {};
     if (existing[STORAGE_KEYS.WEEK_CLICKS] === undefined) updates[STORAGE_KEYS.WEEK_CLICKS] = 0;
@@ -121,7 +117,6 @@ async function runStorageMigrations() {
   }
 
   if (from < 4) {
-    // v3 → v4: REMINDER_HOUR removed; LAST_REMINDER_TIME added
     await new Promise(r => chrome.storage.sync.remove("reminderHour", r));
     const existing = await storageGet(STORAGE_KEYS.LAST_REMINDER_TIME);
     if (existing[STORAGE_KEYS.LAST_REMINDER_TIME] === undefined) {
@@ -138,10 +133,10 @@ chrome.runtime.onStartup.addListener(() => {
 
 /* --- Alarm Management --- */
 
-async function setupAlarms() {
-  updateBadge();
+async function setupAlarms(prefetchedData = null) {
+  updateBadge(prefetchedData);
 
-  const data = await storageGet([
+  const data = prefetchedData || await storageGet([
     STORAGE_KEYS.AUTO_CLICK,
     STORAGE_KEYS.TIME_RANGE,
     STORAGE_KEYS.EXACT_TIME,
@@ -369,13 +364,10 @@ async function scheduleNextReminder(data) {
   const reminderStart = getReminderStartTime(data);
   const lastReminderTime = data[STORAGE_KEYS.LAST_REMINDER_TIME] || 0;
 
-  // The earliest the next reminder can fire:
-  // max(reminderStart, lastReminderTime + interval)
   const afterInterval = new Date(lastReminderTime + REMINDER_INTERVAL_MINUTES * 60 * 1000);
   const nextFire = new Date(Math.max(reminderStart.getTime(), afterInterval.getTime()));
 
   if (nextFire >= midnight) {
-    // Nothing left to do today
     await alarmsClear(ALARM_REMINDER);
     return;
   }
@@ -398,13 +390,12 @@ async function handleMissedReminder(data) {
 
   const now = new Date();
   const reminderStart = getReminderStartTime(data);
-  if (now < reminderStart) return; // window hasn't opened yet
+  if (now < reminderStart) return;
 
   const lastReminderTime = data[STORAGE_KEYS.LAST_REMINDER_TIME] || 0;
   const minsSinceLast = (now.getTime() - lastReminderTime) / (1000 * 60);
-  if (minsSinceLast < REMINDER_MIN_GAP_MINUTES) return; // sent one recently
+  if (minsSinceLast < REMINDER_MIN_GAP_MINUTES) return;
 
-  // Send immediately
   await sendReminderNotification();
   await storageSet({ [STORAGE_KEYS.LAST_REMINDER_TIME]: now.getTime() });
 }
@@ -473,20 +464,29 @@ async function handleAutoClick() {
   openAutoClickTab();
 }
 
+let _isOpeningAutoClickTab = false;
+
 async function openAutoClickTab() {
-  const tab = await tabsCreate({ url: CAMPAIGN_URL, active: false });
-  if (chrome.runtime.lastError || !tab?.id) return;
+  if (_isOpeningAutoClickTab) return;
+  _isOpeningAutoClickTab = true;
 
-  await storageSet({
-    [PENDING_AUTO_CLICK_TAB]: {
-      tabId: tab.id,
-      createdAt: Date.now()
-    }
-  });
+  try {
+    const tab = await tabsCreate({ url: CAMPAIGN_URL, active: false });
+    if (chrome.runtime.lastError || !tab?.id) return;
 
-  chrome.alarms.create(ALARM_AUTO_CLICK_CLEANUP, {
-    delayInMinutes: PENDING_AUTO_CLICK_TIMEOUT_MINUTES
-  });
+    await storageSet({
+      [PENDING_AUTO_CLICK_TAB]: {
+        tabId: tab.id,
+        createdAt: Date.now()
+      }
+    });
+
+    chrome.alarms.create(ALARM_AUTO_CLICK_CLEANUP, {
+      delayInMinutes: PENDING_AUTO_CLICK_TIMEOUT_MINUTES
+    });
+  } finally {
+    _isOpeningAutoClickTab = false;
+  }
 }
 
 async function cleanupPendingAutoClickTab() {
@@ -563,17 +563,14 @@ async function handleReminder() {
     return;
   }
 
-  // Dedup: don't send if we've sent one within the minimum gap
   const now = new Date();
   const lastReminderTime = data[STORAGE_KEYS.LAST_REMINDER_TIME] || 0;
   const minsSinceLast = (now.getTime() - lastReminderTime) / (1000 * 60);
   if (minsSinceLast < REMINDER_MIN_GAP_MINUTES) {
-    // Too soon — re-arm for the correct next slot and exit
     scheduleNextReminder(data);
     return;
   }
 
-  // Write timestamp first to prevent concurrent duplicates
   await storageSet({
     [STORAGE_KEYS.LAST_REMINDER_DATE]: today,
     [STORAGE_KEYS.LAST_REMINDER_TIME]: now.getTime()
@@ -581,7 +578,6 @@ async function handleReminder() {
 
   await sendReminderNotification();
 
-  // Re-arm for the next 2-hour slot
   scheduleNextReminder({
     ...data,
     [STORAGE_KEYS.LAST_REMINDER_TIME]: now.getTime()
@@ -612,8 +608,6 @@ chrome.notifications.onClicked.addListener((notificationId) => {
 /* --- Message Handling --- */
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  // Use if-else so the channel is not kept open for unrecognised messages.
-  // All branches call sendResponse synchronously, so return true is not needed.
   if (message.type === "CLICK_CONFIRMED") {
     recordClick(sender.tab?.id);
     sendResponse({ status: "ok" });
@@ -646,8 +640,6 @@ chrome.tabs.onRemoved.addListener(async (tabId) => {
     await storageRemove(PENDING_AUTO_CLICK_TAB);
     await alarmsClear(ALARM_AUTO_CLICK_CLEANUP);
 
-    // Re-arm the auto-click alarm so the next attempt is not silently lost.
-    // Mirrors the rescheduling logic in cleanupPendingAutoClickTab().
     if (data[STORAGE_KEYS.AUTO_CLICK]) {
       const today = getTodayString();
       if (!hasClickedToday(data, today)) {
@@ -702,6 +694,18 @@ async function recordClick(tabId) {
     ? (data[STORAGE_KEYS.WEEK_CLICKS] || 0) + 1
     : 1;
 
+  const updatedData = {
+    ...data,
+    [STORAGE_KEYS.STREAK]: streak,
+    [STORAGE_KEYS.BEST_STREAK]: bestStreak,
+    [STORAGE_KEYS.TOTAL_CLICKS]: totalClicks,
+    [STORAGE_KEYS.TODAY_CLICKS]: 1,
+    [STORAGE_KEYS.TODAY_DATE]: today,
+    [STORAGE_KEYS.LAST_CLICK_DATE]: today,
+    [STORAGE_KEYS.WEEK_CLICKS]: weekClicks,
+    [STORAGE_KEYS.WEEK_START_DATE]: currentWeekStart
+  };
+
   await storageSet({
     [STORAGE_KEYS.STREAK]: streak,
     [STORAGE_KEYS.BEST_STREAK]: bestStreak,
@@ -725,13 +729,13 @@ async function recordClick(tabId) {
   }
 
   closePendingAutoClickTab(tabId, pendingTab);
-  setupAlarms();
+  setupAlarms(updatedData);
 }
 
 /* --- Badge --- */
 
-async function updateBadge() {
-  const data = await storageGet([STORAGE_KEYS.TODAY_CLICKS, STORAGE_KEYS.TODAY_DATE]);
+async function updateBadge(prefetchedData = null) {
+  const data = prefetchedData || await storageGet([STORAGE_KEYS.TODAY_CLICKS, STORAGE_KEYS.TODAY_DATE]);
   const today = getTodayString();
   const clickedToday = hasClickedToday(data, today);
 
