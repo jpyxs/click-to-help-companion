@@ -44,7 +44,17 @@ function loadStorage(keys) {
 
 function saveStorage(data) {
   return new Promise((resolve) => {
-    chrome.storage.sync.set(data, resolve);
+    chrome.storage.sync.set(data, () => {
+      if (chrome.runtime.lastError) {
+        const msg = chrome.runtime.lastError.message || "";
+        if (msg.includes("QUOTA_BYTES") || msg.includes("quota") || msg.includes("storage")) {
+          console.warn("saveStorage: sync quota exceeded, falling back to local storage.", msg);
+          chrome.storage.local.set(data, () => resolve());
+          return;
+        }
+      }
+      resolve();
+    });
   });
 }
 

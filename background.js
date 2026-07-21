@@ -38,6 +38,39 @@ function storageSet(data) {
   });
 }
 
+/**
+ * Storage-quota-safe write. Tries chrome.storage.sync first;
+ * falls back to chrome.storage.local on quota errors so data is
+ * never silently lost.
+ */
+async function safeStorageSet(data) {
+  return new Promise((resolve) => {
+    chrome.storage.sync.set(data, () => {
+      if (chrome.runtime.lastError) {
+        const msg = chrome.runtime.lastError.message || "";
+        if (
+          msg.includes("QUOTA_BYTES") ||
+          msg.includes("quota") ||
+          msg.includes("storage")
+        ) {
+          console.warn("safeStorageSet: sync quota exceeded, falling back to local storage.", msg);
+          chrome.storage.local.set(data, () => {
+            if (chrome.runtime.lastError) {
+              console.error("safeStorageSet: local fallback also failed:", chrome.runtime.lastError.message);
+            }
+            resolve();
+          });
+        } else {
+          console.error("safeStorageSet error:", msg);
+          resolve();
+        }
+      } else {
+        resolve();
+      }
+    });
+  });
+}
+
 function storageRemove(keys) {
   return new Promise((resolve) => {
     chrome.storage.sync.remove(keys, () => {
@@ -124,7 +157,7 @@ chrome.runtime.onInstalled.addListener(async (details) => {
   }
 
   if (Object.keys(toSet).length > 0) {
-    await storageSet(toSet);
+    await safeStorageSet(toSet);
   }
 
   try {
@@ -150,7 +183,7 @@ async function runStorageMigrations() {
   if (from < 1) {
     const existing = await storageGet(STORAGE_KEYS.LAST_REMINDER_DATE);
     if (existing[STORAGE_KEYS.LAST_REMINDER_DATE] === undefined) {
-      await storageSet({ [STORAGE_KEYS.LAST_REMINDER_DATE]: "" });
+      await safeStorageSet({ [STORAGE_KEYS.LAST_REMINDER_DATE]: "" });
     }
   }
 
@@ -159,18 +192,18 @@ async function runStorageMigrations() {
     const updates = {};
     if (existing[STORAGE_KEYS.WEEK_CLICKS] === undefined) updates[STORAGE_KEYS.WEEK_CLICKS] = 0;
     if (existing[STORAGE_KEYS.WEEK_START_DATE] === undefined) updates[STORAGE_KEYS.WEEK_START_DATE] = "";
-    if (Object.keys(updates).length) await storageSet(updates);
+    if (Object.keys(updates).length) await safeStorageSet(updates);
   }
 
   if (from < 4) {
     await new Promise(r => chrome.storage.sync.remove("reminderHour", r));
     const existing = await storageGet(STORAGE_KEYS.LAST_REMINDER_TIME);
     if (existing[STORAGE_KEYS.LAST_REMINDER_TIME] === undefined) {
-      await storageSet({ [STORAGE_KEYS.LAST_REMINDER_TIME]: 0 });
+      await safeStorageSet({ [STORAGE_KEYS.LAST_REMINDER_TIME]: 0 });
     }
   }
 
-  await storageSet({ storageVersion: CURRENT_STORAGE_VERSION });
+  await safeStorageSet({ storageVersion: CURRENT_STORAGE_VERSION });
 }
 
 chrome.runtime.onStartup.addListener(() => {
@@ -227,7 +260,11 @@ function scheduleAutoClickAlarm(timeRange, alreadyClicked = false, customTimes =
     MIN_ALARM_DELAY_MINUTES
   );
 
-  chrome.alarms.create(ALARM_AUTO_CLICK, { delayInMinutes: delayMinutes });
+  try {
+    chrome.alarms.create(ALARM_AUTO_CLICK, { delayInMinutes: delayMinutes });
+  } catch (e) {
+    console.warn("scheduleAutoClickAlarm: failed to create alarm:", e);
+  }
 }
 
 async function setupAutoClickAlarm() {
@@ -419,10 +456,15 @@ async function scheduleNextReminder(data) {
   }
 
   const delayMs = Math.max(nextFire.getTime() - now.getTime(), MIN_ALARM_DELAY_MINUTES * 60 * 1000);
-  const delayMinutes = delayMs / (1000 * 60);
+  // Enforce at least 1 minute to prevent rapid-fire reminder loops.
+  const delayMinutes = Math.max(delayMs / (1000 * 60), 1);
 
   await alarmsClear(ALARM_REMINDER);
-  chrome.alarms.create(ALARM_REMINDER, { delayInMinutes: delayMinutes });
+  try {
+    chrome.alarms.create(ALARM_REMINDER, { delayInMinutes: delayMinutes });
+  } catch (e) {
+    console.warn("scheduleNextReminder: failed to create alarm:", e);
+  }
 }
 
 /**
@@ -443,7 +485,7 @@ async function handleMissedReminder(data) {
   if (minsSinceLast < REMINDER_MIN_GAP_MINUTES) return;
 
   await sendReminderNotification(data);
-  await storageSet({ [STORAGE_KEYS.LAST_REMINDER_TIME]: now.getTime() });
+  await safeStorageSet({ [STORAGE_KEYS.LAST_REMINDER_TIME]: now.getTime() });
 }
 
 async function handleMissedAutoClickWindow(data) {
@@ -520,16 +562,20 @@ async function openAutoClickTab() {
     const tab = await tabsCreate({ url: CAMPAIGN_URL, active: false });
     if (chrome.runtime.lastError || !tab?.id) return;
 
-    await storageSet({
+    await safeStorageSet({
       [PENDING_AUTO_CLICK_TAB]: {
         tabId: tab.id,
         createdAt: Date.now()
       }
     });
 
-    chrome.alarms.create(ALARM_AUTO_CLICK_CLEANUP, {
-      delayInMinutes: PENDING_AUTO_CLICK_TIMEOUT_MINUTES
-    });
+    try {
+      chrome.alarms.create(ALARM_AUTO_CLICK_CLEANUP, {
+        delayInMinutes: PENDING_AUTO_CLICK_TIMEOUT_MINUTES
+      });
+    } catch (e) {
+      console.warn("openAutoClickTab: failed to create cleanup alarm:", e);
+    }
   } finally {
     _isOpeningAutoClickTab = false;
   }
@@ -558,7 +604,11 @@ async function cleanupPendingAutoClickTab() {
     const currentWindow = getTimeRangeWindow(timeRange, new Date(), customTimes);
 
     if (new Date() <= currentWindow.end) {
-      chrome.alarms.create(ALARM_AUTO_CLICK, { delayInMinutes: 15 });
+      try {
+        chrome.alarms.create(ALARM_AUTO_CLICK, { delayInMinutes: 15 });
+      } catch (e) {
+        console.warn("cleanupPendingAutoClickTab: failed to create retry alarm:", e);
+      }
     } else {
       scheduleAutoClickAlarm(timeRange, true, customTimes);
     }
@@ -617,7 +667,7 @@ async function handleReminder() {
     return;
   }
 
-  await storageSet({
+  await safeStorageSet({
     [STORAGE_KEYS.LAST_REMINDER_DATE]: today,
     [STORAGE_KEYS.LAST_REMINDER_TIME]: now.getTime()
   });
@@ -695,7 +745,11 @@ chrome.tabs.onRemoved.addListener(async (tabId) => {
         const customTimes = getCustomTimes(data);
         const currentWindow = getTimeRangeWindow(timeRange, new Date(), customTimes);
         if (new Date() <= currentWindow.end) {
-          chrome.alarms.create(ALARM_AUTO_CLICK, { delayInMinutes: 15 });
+          try {
+            chrome.alarms.create(ALARM_AUTO_CLICK, { delayInMinutes: 15 });
+          } catch (e) {
+            console.warn("onTabRemoved: failed to create retry alarm:", e);
+          }
         } else {
           scheduleAutoClickAlarm(timeRange, true, customTimes);
         }
@@ -754,7 +808,8 @@ async function recordClick(tabId) {
     [STORAGE_KEYS.WEEK_START_DATE]: currentWeekStart
   };
 
-  await storageSet({
+  // Single consolidated write — updatedData already contains all updated fields.
+  await safeStorageSet({
     [STORAGE_KEYS.STREAK]: streak,
     [STORAGE_KEYS.BEST_STREAK]: bestStreak,
     [STORAGE_KEYS.TOTAL_CLICKS]: totalClicks,
@@ -822,15 +877,19 @@ async function handleKeyboardClick() {
   const tab = await tabsCreate({ url: CAMPAIGN_URL, active: true });
   if (chrome.runtime.lastError || !tab?.id) return;
 
-  await storageSet({
+  await safeStorageSet({
     [PENDING_AUTO_CLICK_TAB]: {
       tabId: tab.id,
       createdAt: Date.now()
     }
   });
-  chrome.alarms.create(ALARM_AUTO_CLICK_CLEANUP, {
-    delayInMinutes: PENDING_AUTO_CLICK_TIMEOUT_MINUTES
-  });
+  try {
+    chrome.alarms.create(ALARM_AUTO_CLICK_CLEANUP, {
+      delayInMinutes: PENDING_AUTO_CLICK_TIMEOUT_MINUTES
+    });
+  } catch (e) {
+    console.warn("handleKeyboardClick: failed to create cleanup alarm:", e);
+  }
 }
 
 chrome.storage.onChanged.addListener((changes, areaName) => {

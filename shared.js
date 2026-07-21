@@ -42,6 +42,28 @@ export function getWeekStartDate(dateStr) {
   return d.toLocaleDateString("en-CA");
 }
 
+/**
+ * Hard-coded minimal fallback strings used when both the locale fetch and
+ * the chrome.i18n API are unavailable (e.g. during unit tests or if the
+ * network fails to load a messages.json).
+ */
+const FALLBACK_MESSAGES = {
+  btnClickDefault: { message: "Click to Help Palestine" },
+  btnDone:         { message: "Done for Today ✓" },
+  btnOpening:      { message: "Opening…" },
+  btnWaiting:      { message: "Waiting for confirmation…" },
+  statusPending:   { message: "You haven't clicked yet today." },
+  statusCompleted: { message: "Clicked today! Thank you." },
+  statusAtRisk:    {
+    message: "At risk — $TIME$ left!",
+    placeholders: { time: { content: "$1" } }
+  },
+  notifReminderTitle:   { message: "Don't forget to help Palestine!" },
+  notifReminderMessage: { message: "Click today to keep your streak alive." },
+  notifSuccessTitle:    { message: "Auto-click succeeded!" },
+  notifSuccessMessage:  { message: "Your daily click has been recorded." },
+};
+
 const localeCache = {};
 
 /**
@@ -90,7 +112,11 @@ export async function getI18nMessage(key, langPreference = "auto", substitutions
   }
 
   const messages = localeCache[lang] || localeCache["en"] || {};
-  const entry = messages[key];
+  let entry = messages[key];
+
+  if (!entry) {
+    entry = FALLBACK_MESSAGES[key];
+  }
 
   if (!entry) {
     if (typeof chrome !== "undefined" && chrome.i18n && chrome.i18n.getMessage) {
