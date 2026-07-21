@@ -1,4 +1,4 @@
-import { CAMPAIGN_URL, ALARM_AUTO_CLICK, STORAGE_KEYS, getTodayString, getWeekStartDate } from "./shared.js";
+import { CAMPAIGN_URL, ALARM_AUTO_CLICK, STORAGE_KEYS, getTodayString, getWeekStartDate, getI18nMessage } from "./shared.js";
 
 /* --- Constants --- */
 
@@ -26,6 +26,7 @@ const dom = {
   exactTimeInput: document.getElementById("exact-time-input"),
   customTimeHint: document.getElementById("custom-time-hint"),
   toggleNotifications: document.getElementById("toggle-notifications"),
+  languageSelect: document.getElementById("language-select"),
   streakProgress: document.querySelector(".streak-progress"),
   countdownRow: document.getElementById("countdown-row"),
   countdownText: document.getElementById("countdown-text"),
@@ -63,7 +64,8 @@ const state = {
   customTimeStart: "09:00",
   customTimeEnd: "10:00",
   weekClicks: 0,
-  weekStartDate: ""
+  weekStartDate: "",
+  language: "auto"
 };
 
 async function loadState() {
@@ -85,6 +87,7 @@ async function loadState() {
   state.customTimeEnd = data[STORAGE_KEYS.CUSTOM_TIME_END] || "10:00";
   state.weekClicks = data[STORAGE_KEYS.WEEK_CLICKS] || 0;
   state.weekStartDate = data[STORAGE_KEYS.WEEK_START_DATE] || "";
+  state.language = data[STORAGE_KEYS.LANGUAGE] || "auto";
 
   const dateChanged = reconcileDate();
   if (dateChanged) {
@@ -114,7 +117,6 @@ function reconcileDate() {
 
   const currentWeekStart = getWeekStartDate(today);
   if (!state.weekStartDate) {
-    // First run — initialise week tracking without touching weekClicks (already 0).
     state.weekStartDate = currentWeekStart;
     changed = true;
   } else if (state.weekStartDate !== currentWeekStart) {
@@ -141,7 +143,8 @@ async function persistState() {
     [STORAGE_KEYS.CUSTOM_TIME_START]: state.customTimeStart,
     [STORAGE_KEYS.CUSTOM_TIME_END]: state.customTimeEnd,
     [STORAGE_KEYS.WEEK_CLICKS]: state.weekClicks,
-    [STORAGE_KEYS.WEEK_START_DATE]: state.weekStartDate
+    [STORAGE_KEYS.WEEK_START_DATE]: state.weekStartDate,
+    [STORAGE_KEYS.LANGUAGE]: state.language
   });
 }
 
@@ -156,7 +159,6 @@ function clearAtRiskCountdown() {
   }
 }
 
-/** Returns "Xh Ym left" or "Xm left" string counting down to midnight. */
 function getMidnightCountdown() {
   const now = new Date();
   const midnight = new Date(now);
@@ -164,8 +166,8 @@ function getMidnightCountdown() {
   const ms = midnight.getTime() - now.getTime();
   const h = Math.floor(ms / 3600000);
   const m = Math.floor((ms % 3600000) / 60000);
-  if (h > 0) return `${h}h ${m}m left`;
-  return `${m}m left`;
+  if (h > 0) return `${h}h ${m}m`;
+  return `${m}m`;
 }
 
 /* --- Milestone Celebration --- */
@@ -194,14 +196,15 @@ function spawnConfetti() {
   }, 4000);
 }
 
-function showMilestoneCelebration(streak) {
+async function showMilestoneCelebration(streak) {
   spawnConfetti();
   const ringEl = dom.streakProgress.closest(".streak-ring");
 
   if (dom.milestoneToast) {
     if (_milestoneToastTimer) { clearTimeout(_milestoneToastTimer); _milestoneToastTimer = null; }
     const emoji = streak >= 30 ? "\uD83C\uDF1F" : "\uD83D\uDD25";
-    dom.milestoneToast.textContent = `${emoji} ${streak}-Day Streak!`;
+    const text = await getI18nMessage("milestoneStreak", state.language, [streak]);
+    dom.milestoneToast.textContent = `${emoji} ${text}`;
     dom.milestoneToast.classList.remove("visible");
     void dom.milestoneToast.offsetWidth;
     dom.milestoneToast.classList.add("visible");
@@ -248,7 +251,7 @@ function updateStreakRing(isInitial) {
 
 let _prevClickedToday = null;
 
-function updateStatusBar() {
+async function updateStatusBar() {
   const clickedToday = state.todayClicks > 0;
 
   dom.btnClick.classList.remove("btn-click--waiting");
@@ -267,12 +270,12 @@ function updateStatusBar() {
     }
 
     dom.statusIcon.innerHTML = "\u2713";
-    dom.statusText.textContent = "Today's click completed!";
+    dom.statusText.textContent = await getI18nMessage("statusCompleted", state.language);
     dom.btnClick.disabled = true;
-    dom.btnClick.textContent = "Done for Today";
+    dom.btnClick.textContent = await getI18nMessage("btnDone", state.language);
   } else {
     dom.statusBar.classList.remove("completed", "just-completed");
-    const atRisk = new Date().getHours() >= 20; // at-risk after 8 PM
+    const atRisk = new Date().getHours() >= 20;
     dom.statusBar.classList.toggle("at-risk", atRisk);
     dom.statusIcon.innerHTML = "!";
 
@@ -280,16 +283,22 @@ function updateStatusBar() {
 
     if (atRisk) {
       const updateAtRiskText = () => {
-        dom.statusText.textContent = `Streak at risk \u2014 ${getMidnightCountdown()}`;
+        const timeStr = getMidnightCountdown();
+        // Fetch the localized message without awaiting – fire‑and‑forget is acceptable here
+        getI18nMessage("statusAtRisk", state.language, [timeStr]).then((msg) => {
+          dom.statusText.textContent = msg;
+        });
       };
+      // Initial update
       updateAtRiskText();
+      // Use a normal interval; the callback is synchronous.
       _atRiskInterval = setInterval(updateAtRiskText, 60000);
     } else {
-      dom.statusText.textContent = "Pending until thank-you page";
+      dom.statusText.textContent = await getI18nMessage("statusPending", state.language);
     }
 
     dom.btnClick.disabled = false;
-    dom.btnClick.textContent = "Click to Help Palestine";
+    dom.btnClick.textContent = await getI18nMessage("btnClickDefault", state.language);
   }
 
   _prevClickedToday = clickedToday;
@@ -297,7 +306,7 @@ function updateStatusBar() {
 
 let _initialRender = true;
 
-function render() {
+async function render() {
   const prevStreak = parseInt(dom.streakCount.textContent, 10);
   dom.streakCount.textContent = state.streak;
 
@@ -320,13 +329,58 @@ function render() {
 
   dom.customTimeStart.value = state.customTimeStart;
   dom.customTimeEnd.value = state.customTimeEnd;
-  updateCustomTimeVisibility();
+  await updateCustomTimeVisibility();
 
   updateStreakRing(_initialRender);
-  updateStatusBar();
-  updateCountdown();
+  await applyTranslations();
 
   _initialRender = false;
+}
+
+/* --- Dynamic Internationalization --- */
+
+async function applyTranslations() {
+  const i18nElements = document.querySelectorAll("[data-i18n]");
+  for (const el of i18nElements) {
+    // Skip the main click button – its text is managed dynamically by updateStatusBar()
+    if (el.id === "btn-click") continue;
+    const key = el.getAttribute("data-i18n");
+    const text = await getI18nMessage(key, state.language);
+    if (text) {
+      if (el.tagName === "INPUT" && el.type === "button") {
+        el.value = text;
+      } else {
+        el.textContent = text;
+      }
+    }
+  }
+  // Refresh dynamic UI after language change.
+  await updateStatusBar();
+
+  if (dom.languageSelect) {
+    dom.languageSelect.value = state.language;
+  }
+
+  let activeLang = state.language;
+  if (!activeLang || activeLang === "auto") {
+    if (typeof chrome !== "undefined" && chrome.i18n && chrome.i18n.getUILanguage) {
+      activeLang = chrome.i18n.getUILanguage().split("-")[0];
+    } else {
+      activeLang = "en";
+    }
+  }
+
+  const shell = document.querySelector(".popup-shell");
+  if (shell) {
+    if (activeLang === "ar") {
+      shell.setAttribute("dir", "rtl");
+    } else {
+      shell.removeAttribute("dir");
+    }
+  }
+
+  await updateStatusBar();
+  updateCountdown();
 }
 
 /* --- Countdown --- */
@@ -352,18 +406,21 @@ function updateCountdown() {
         clearInterval(_countdownInterval);
         _countdownInterval = null;
       }
-      dom.countdownText.textContent = "Scheduling\u2026";
+      getI18nMessage("scheduling", state.language).then((msg) => {
+        dom.countdownText.textContent = msg;
+      });
       return;
     }
 
-    dom.countdownLabel.textContent = state.todayClicks > 0
-      ? "Auto-click tomorrow"
-      : "Next auto-click";
+    const labelKey = state.todayClicks > 0 ? "autoClickTomorrow" : "nextAutoClick";
+    getI18nMessage(labelKey, state.language).then((msg) => {
+      dom.countdownLabel.textContent = msg;
+    });
 
-    function tick() {
+    async function tick() {
       const ms = alarm.scheduledTime - Date.now();
       if (ms <= 0) {
-        dom.countdownText.textContent = "Any moment now";
+        dom.countdownText.textContent = await getI18nMessage("anyMoment", state.language);
         return;
       }
       const h = Math.floor(ms / 3600000);
@@ -391,18 +448,17 @@ function updateCountdown() {
 
 function handleClick() {
   if (state.todayClicks > 0) return;
-
   openCampaignPage();
 }
 
-function openCampaignPage() {
+async function openCampaignPage() {
   const previousText = dom.btnClick.textContent;
 
   dom.btnClick.disabled = true;
-  dom.btnClick.textContent = "Opening Campaign\u2026";
+  dom.btnClick.textContent = await getI18nMessage("btnOpening", state.language);
 
   if (typeof chrome !== "undefined" && chrome.tabs) {
-    chrome.tabs.create({ url: CAMPAIGN_URL, active: true }, () => {
+    chrome.tabs.create({ url: CAMPAIGN_URL, active: true }, async () => {
       if (chrome.runtime.lastError) {
         dom.btnClick.disabled = false;
         dom.btnClick.textContent = previousText;
@@ -410,13 +466,13 @@ function openCampaignPage() {
         return;
       }
 
-      dom.btnClick.textContent = "Waiting for Confirmation";
+      dom.btnClick.textContent = await getI18nMessage("btnWaiting", state.language);
       dom.btnClick.classList.add("btn-click--waiting");
 
-      setTimeout(() => {
+      setTimeout(async () => {
         if (state.todayClicks === 0) {
           dom.btnClick.disabled = false;
-          dom.btnClick.textContent = "Click to Help Palestine";
+          dom.btnClick.textContent = await getI18nMessage("btnClickDefault", state.language);
           dom.btnClick.classList.remove("btn-click--waiting");
         }
       }, 6000);
@@ -428,8 +484,6 @@ function openCampaignPage() {
     dom.btnClick.classList.remove("btn-click--waiting");
   }
 }
-
-
 
 function notifyBackground(type) {
   if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.sendMessage) {
@@ -478,29 +532,27 @@ dom.timeRangeSelect.addEventListener("change", (e) => {
   notifyBackground("AUTO_CLICK_CHANGED");
 });
 
-/** Shows/hides the custom time inputs depending on the selected time range. */
-function updateCustomTimeVisibility() {
+async function updateCustomTimeVisibility() {
   const isCustom = state.timeRange === "custom";
   dom.customTimeContainer.classList.toggle("visible", state.autoClick && isCustom);
   dom.exactTimeContainer.classList.toggle("visible", state.autoClick && state.timeRange === "exact");
-  if (isCustom) validateCustomTimes();
+  if (isCustom) await validateCustomTimes();
   else dom.customTimeHint.textContent = "";
 }
 
-/** Returns true when the input is valid and saves; shows a hint otherwise. */
-function validateCustomTimes() {
+async function validateCustomTimes() {
   const start = dom.customTimeStart.value;
   const end = dom.customTimeEnd.value;
   const valid = start && end && start < end;
 
   dom.customTimeStart.classList.toggle("invalid", !valid);
   dom.customTimeEnd.classList.toggle("invalid", !valid);
-  dom.customTimeHint.textContent = valid ? "" : "End time must be after start time.";
+  dom.customTimeHint.textContent = valid ? "" : await getI18nMessage("customTimeHintError", state.language);
   return valid;
 }
 
 async function saveCustomTimes() {
-  if (!validateCustomTimes()) return;
+  if (!await validateCustomTimes()) return;
   state.customTimeStart = dom.customTimeStart.value;
   state.customTimeEnd = dom.customTimeEnd.value;
   await persistState();
@@ -525,6 +577,12 @@ dom.toggleNotifications.addEventListener("change", () => {
   state.notifications = dom.toggleNotifications.checked;
   persistState();
   notifyBackground("NOTIFICATIONS_CHANGED");
+});
+
+dom.languageSelect.addEventListener("change", async (e) => {
+  state.language = e.target.value;
+  await persistState();
+  await applyTranslations();
 });
 
 document.querySelectorAll(".footer-link").forEach((link) => {
@@ -572,7 +630,7 @@ window.addEventListener("unload", () => {
 
 (async function init() {
   await loadState();
-  render();
+  await render();
 
   if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.getManifest) {
     const el = document.querySelector(".footer-version");

@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=380, initial-scale=1.0">
-  <title>Click to Help Companion</title>
+  <title data-i18n="extName">Click to Help Companion</title>
   <link rel="stylesheet" href="popup.css">
 </head>
 
@@ -23,10 +23,10 @@
           <span class="flag-stripe flag-green"></span>
           <div class="flag-triangle"></div>
         </div>
-        <h1 class="header-title">Click to Help</h1>
+        <h1 class="header-title" data-i18n="extName">Click to Help</h1>
       </div>
       <div class="badge-free-palestine" aria-label="Free Palestine">
-        <span class="badge-text">Free Palestine</span>
+        <span class="badge-text" data-i18n="badgeFreePalestine">Free Palestine</span>
       </div>
     </header>
 
@@ -43,10 +43,10 @@
             </svg>
             <div class="streak-value">
               <span id="streak-count" class="streak-number">0</span>
-              <span class="streak-unit">days</span>
+              <span class="streak-unit" data-i18n="days">days</span>
             </div>
           </div>
-          <h2 class="streak-label">Daily Streak</h2>
+          <h2 class="streak-label" data-i18n="dailyStreak">Daily Streak</h2>
         </div>
       </section>
 
@@ -54,33 +54,33 @@
       <section class="stats">
         <div class="stat-card">
           <span class="stat-value" id="total-clicks">0</span>
-          <span class="stat-label">Total Clicks</span>
+          <span class="stat-label" data-i18n="totalClicks">Total Clicks</span>
         </div>
         <div class="stat-card">
           <span class="stat-value" id="week-clicks">0</span>
-          <span class="stat-label">This Week</span>
+          <span class="stat-label" data-i18n="thisWeek">This Week</span>
         </div>
         <div class="stat-card">
           <span class="stat-value" id="best-streak">0</span>
-          <span class="stat-label">Best Streak</span>
+          <span class="stat-label" data-i18n="bestStreak">Best Streak</span>
         </div>
       </section>
 
       <!-- Today Status -->
       <section class="status-bar" id="status-bar" aria-live="polite">
         <div class="status-icon" id="status-icon">!</div>
-        <span class="status-text" id="status-text">Pending until thank-you page</span>
+        <span class="status-text" id="status-text" data-i18n="statusPending">Pending until thank-you page</span>
       </section>
 
       <!-- Settings Panel -->
       <section class="settings">
-        <h3 class="settings-title">Settings</h3>
+        <h3 class="settings-title" data-i18n="settingsTitle">Settings</h3>
 
         <div class="settings-group">
           <div class="setting-row">
             <div class="setting-info">
-              <span class="setting-name">Auto-Click Daily</span>
-              <span class="setting-desc" id="auto-click-desc">Click automatically within your active hours</span>
+              <span class="setting-name" data-i18n="settingAutoClick">Auto-Click Daily</span>
+              <span class="setting-desc" id="auto-click-desc" data-i18n="settingAutoClickDesc">Click automatically within your active hours</span>
             </div>
             <label class="toggle" for="toggle-autoclick">
               <input type="checkbox" id="toggle-autoclick" aria-describedby="auto-click-desc">
@@ -89,28 +89,28 @@
           </div>
 
           <div class="time-range-container" id="time-range-container">
-            <label class="time-range-label" for="time-range-select">Auto-click time</label>
+            <label class="time-range-label" for="time-range-select" data-i18n="autoClickTime">Auto-click time</label>
             <select class="time-range-select" id="time-range-select">
-              <option value="morning">Morning (8–10 AM)</option>
-              <option value="midday">Midday (11 AM–2 PM)</option>
-              <option value="afternoon">Afternoon (3–5 PM)</option>
-              <option value="evening">Evening (6–8 PM)</option>
-              <option value="night">Night (9–11 PM)</option>
-              <option value="exact">Exact time...</option>
-              <option value="custom">Custom range...</option>
+              <option value="morning" data-i18n="timeMorning">Morning (8–10 AM)</option>
+              <option value="midday" data-i18n="timeMidday">Midday (11 AM–2 PM)</option>
+              <option value="afternoon" data-i18n="timeAfternoon">Afternoon (3–5 PM)</option>
+              <option value="evening" data-i18n="timeEvening">Evening (6–8 PM)</option>
+              <option value="night" data-i18n="timeNight">Night (9–11 PM)</option>
+              <option value="exact" data-i18n="timeExact">Exact time...</option>
+              <option value="custom" data-i18n="timeCustom">Custom range...</option>
             </select>
             <div class="custom-time-container" id="custom-time-container">
               <div class="custom-time-row">
-                <label class="custom-time-label" for="custom-time-start">From</label>
+                <label class="custom-time-label" for="custom-time-start" data-i18n="from">From</label>
                 <input class="custom-time-input" type="time" id="custom-time-start" value="09:00">
-                <label class="custom-time-label" for="custom-time-end">To</label>
+                <label class="custom-time-label" for="custom-time-end" data-i18n="to">To</label>
                 <input class="custom-time-input" type="time" id="custom-time-end" value="10:00">
               </div>
               <span class="custom-time-hint" id="custom-time-hint"></span>
             </div>
             <div class="exact-time-container" id="exact-time-container">
               <div class="custom-time-row">
-                <label class="custom-time-label" for="exact-time-input">At</label>
+                <label class="custom-time-label" for="exact-time-input" data-i18n="at">At</label>
                 <input class="custom-time-input" type="time" id="exact-time-input" value="12:00">
               </div>
             </div>
@@ -122,7 +122,7 @@
                   <path d="M8 4.5v3.75l2.5 1.5" fill="none" stroke="currentColor" stroke-width="1.3"
                     stroke-linecap="round" />
                 </svg>
-                <span id="countdown-label-text">Next auto-click</span>
+                <span id="countdown-label-text" data-i18n="nextAutoClick">Next auto-click</span>
               </span>
               <span class="countdown-value" id="countdown-text">—</span>
             </div>
@@ -132,25 +132,44 @@
         <div class="settings-group">
           <div class="setting-row">
             <div class="setting-info">
-              <span class="setting-name">Notifications</span>
-              <span class="setting-desc" id="notifications-desc">Remind me if I haven't clicked</span>
+              <span class="setting-name" data-i18n="settingNotifications">Notifications</span>
+              <span class="setting-desc" id="notifications-desc" data-i18n="settingNotificationsDesc">Remind me if I haven't clicked</span>
             </div>
             <label class="toggle" for="toggle-notifications">
               <input type="checkbox" id="toggle-notifications" checked aria-describedby="notifications-desc">
               <span class="toggle-slider"></span>
             </label>
           </div>
-
         </div>
+
+        <div class="settings-group">
+          <div class="setting-row">
+            <div class="setting-info">
+              <span class="setting-name" data-i18n="settingLanguage">Language</span>
+              <span class="setting-desc" id="language-desc" data-i18n="settingLanguageDesc">Choose extension display language</span>
+            </div>
+            <select class="time-range-select language-select" id="language-select" aria-describedby="language-desc">
+              <option value="auto" data-i18n="langAuto">Auto (Browser)</option>
+              <option value="en">English</option>
+              <option value="ar">العربية</option>
+              <option value="es">Español</option>
+              <option value="fr">Français</option>
+              <option value="de">Deutsch</option>
+              <option value="tr">Türkçe</option>
+              <option value="id">Bahasa Indonesia</option>
+            </select>
+          </div>
+        </div>
+
       </section>
 
       <!-- Action Button -->
       <section class="action-section">
-        <button class="btn-click" id="btn-click">Click to Help Palestine</button>
+        <button class="btn-click" id="btn-click" data-i18n="btnClickDefault">Click to Help Palestine</button>
         <p class="shortcut-hint">
           <kbd>Alt</kbd><span class="shortcut-plus">+</span><kbd>Shift</kbd><span
             class="shortcut-plus">+</span><kbd>C</kbd>
-          triggers this from anywhere
+          <span data-i18n="shortcutHintText">triggers this from anywhere</span>
         </p>
       </section>
 
@@ -163,7 +182,7 @@
               <path fill="currentColor"
                 d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z" />
             </svg>
-            <span>Contribute Code</span>
+            <span data-i18n="linkContribute">Contribute Code</span>
           </a>
 
           <a class="footer-link" href="https://visualizingpalestine.org/" data-external="true">
@@ -171,7 +190,7 @@
               <path fill="currentColor"
                 d="M8 0a8 8 0 100 16A8 8 0 008 0zm0 1.5a6.5 6.5 0 011.938.297L8.5 3.5l-2-1-.5.5v2l-1.5 1L3 4.5l-.876.876A6.47 6.47 0 018 1.5zM1.5 8c0-.648.1-1.272.283-1.862L3 7.5v1l1.5 1.5v2l1 1-.5 1.5A6.5 6.5 0 011.5 8zm8.5 6.29V13l-1-1v-1.5L11 9l1.5.5 1.38-1.38A6.5 6.5 0 0110 14.29z" />
             </svg>
-            <span>Visualizing Palestine</span>
+            <span data-i18n="linkVisualizing">Visualizing Palestine</span>
           </a>
 
           <a class="footer-link" href="https://www.youtube.com/watch?v=yBjMbe24Vu0" data-external="true">
@@ -179,7 +198,7 @@
               <path fill="currentColor"
                 d="M15.665 4.086a2.007 2.007 0 00-1.413-1.42C12.991 2.27 8 2.27 8 2.27s-4.991 0-6.252.396a2.007 2.007 0 00-1.413 1.42C0 5.355 0 8 0 8s0 2.645.335 3.914a2.007 2.007 0 001.413 1.42C3.009 13.73 8 13.73 8 13.73s4.991 0 6.252-.396a2.007 2.007 0 001.413-1.42C16 10.645 16 8 16 8s0-2.645-.335-3.914zM6.4 10.275V5.725L10.546 8 6.4 10.275z" />
             </svg>
-            <span>History of the Question of Palestine</span>
+            <span data-i18n="linkHistory">History of the Question of Palestine</span>
           </a>
         </nav>
 
@@ -187,7 +206,7 @@
           <div class="footer-flag-stripe"></div>
           <div class="footer-meta">
             <span class="footer-version">v1.4.0</span>
-            <span class="footer-author">by @jpyxs</span>
+            <span class="footer-author" data-i18n="byAuthor">by @jpyxs</span>
           </div>
         </div>
       </footer>

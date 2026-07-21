@@ -1,4 +1,4 @@
-import { CAMPAIGN_URL, ALARM_AUTO_CLICK, STORAGE_KEYS, getTodayString, getWeekStartDate } from "./shared.js";
+import { CAMPAIGN_URL, ALARM_AUTO_CLICK, STORAGE_KEYS, getTodayString, getWeekStartDate, getI18nMessage } from "./shared.js";
 
 /* --- Constants --- */
 
@@ -442,7 +442,7 @@ async function handleMissedReminder(data) {
   const minsSinceLast = (now.getTime() - lastReminderTime) / (1000 * 60);
   if (minsSinceLast < REMINDER_MIN_GAP_MINUTES) return;
 
-  await sendReminderNotification();
+  await sendReminderNotification(data);
   await storageSet({ [STORAGE_KEYS.LAST_REMINDER_TIME]: now.getTime() });
 }
 
@@ -622,7 +622,7 @@ async function handleReminder() {
     [STORAGE_KEYS.LAST_REMINDER_TIME]: now.getTime()
   });
 
-  await sendReminderNotification();
+  await sendReminderNotification(data);
 
   scheduleNextReminder({
     ...data,
@@ -630,13 +630,18 @@ async function handleReminder() {
   });
 }
 
-function sendReminderNotification() {
+async function sendReminderNotification(data = null) {
+  const prefData = data || await storageGet(STORAGE_KEYS.LANGUAGE);
+  const lang = prefData[STORAGE_KEYS.LANGUAGE] || "auto";
+  const title = await getI18nMessage("notifReminderTitle", lang);
+  const msg = await getI18nMessage("notifReminderMessage", lang);
+
   return new Promise((resolve) => {
     chrome.notifications.create("click-reminder", {
       type: "basic",
       iconUrl: "icons/icon-128.png",
-      title: "Click to Help Palestine",
-      message: "You haven't clicked today. Keep your streak alive!",
+      title: title,
+      message: msg,
       priority: 2
     }, resolve);
   });
@@ -662,9 +667,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     sendResponse({ status: "ok" });
   } else if (message.type === "NOTIFICATIONS_CHANGED") {
     setupReminderAlarm();
-    sendResponse({ status: "ok" });
-  } else if (message.type === "SETTINGS_CHANGED") {
-    setupAlarms();
     sendResponse({ status: "ok" });
   }
 });
@@ -765,11 +767,14 @@ async function recordClick(tabId) {
 
   const isAutoClick = tabId && pendingTab && tabId === getPendingAutoClickTabId(pendingTab);
   if (isAutoClick) {
+    const lang = data[STORAGE_KEYS.LANGUAGE] || "auto";
+    const title = await getI18nMessage("notifSuccessTitle", lang);
+    const msg = await getI18nMessage("notifSuccessMessage", lang);
     chrome.notifications.create({
       type: "basic",
       iconUrl: "icons/icon-128.png",
-      title: "Click to Help Palestine",
-      message: "Daily auto-click successful! Thank you for your support.",
+      title: title,
+      message: msg,
       priority: 0
     });
   }

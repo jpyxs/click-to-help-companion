@@ -1,0 +1,162 @@
+{
+  "extName": {
+    "message": "Click to Help Companion"
+  },
+  "extDescription": {
+    "message": "Arab.org'un Filistin için Tıkla Yardım Et kampanyasına günlük onaylı tıklamaları otomatikleştirir ve takip eder."
+  },
+  "cmdTriggerClick": {
+    "message": "Filistin için Tıkla Yardım Et kampanyasını aç"
+  },
+  "badgeFreePalestine": {
+    "message": "Özgür Filistin"
+  },
+  "dailyStreak": {
+    "message": "Günlük Seri"
+  },
+  "days": {
+    "message": "gün"
+  },
+  "totalClicks": {
+    "message": "Toplam Tıklama"
+  },
+  "thisWeek": {
+    "message": "Bu Hafta"
+  },
+  "bestStreak": {
+    "message": "En İyi Seri"
+  },
+  "statusPending": {
+    "message": "Teşekkür sayfasına kadar beklemede"
+  },
+  "statusCompleted": {
+    "message": "Bugünün tıklaması tamamlandı!"
+  },
+  "statusAtRisk": {
+    "message": "Seri risk altında — son $TIME$",
+    "placeholders": {
+      "time": {
+        "content": "$1"
+      }
+    }
+  },
+  "settingsTitle": {
+    "message": "Ayarlar"
+  },
+  "settingAutoClick": {
+    "message": "Günlük Otomatik Tıklama"
+  },
+  "settingAutoClickDesc": {
+    "message": "Aktif saatlerinizde otomatik olarak tıklar"
+  },
+  "settingNotifications": {
+    "message": "Bildirimler"
+  },
+  "settingNotificationsDesc": {
+    "message": "Tıklamadığımda bana hatırlat"
+  },
+  "settingLanguage": {
+    "message": "Dil"
+  },
+  "settingLanguageDesc": {
+    "message": "Uzantı görünüm dilini seçin"
+  },
+  "langAuto": {
+    "message": "Otomatik (Tarayıcı)"
+  },
+  "autoClickTime": {
+    "message": "Otomatik tıklama zamanı"
+  },
+  "timeMorning": {
+    "message": "Sabah (08:00–10:00)"
+  },
+  "timeMidday": {
+    "message": "Öğle (11:00–14:00)"
+  },
+  "timeAfternoon": {
+    "message": "Öğleden Sonra (15:00–17:00)"
+  },
+  "timeEvening": {
+    "message": "Akşam (18:00–20:00)"
+  },
+  "timeNight": {
+    "message": "Gece (21:00–23:00)"
+  },
+  "timeExact": {
+    "message": "Tam saat..."
+  },
+  "timeCustom": {
+    "message": "Özel aralık..."
+  },
+  "from": {
+    "message": "Başlangıç"
+  },
+  "to": {
+    "message": "Bitiş"
+  },
+  "at": {
+    "message": "Saat"
+  },
+  "customTimeHintError": {
+    "message": "Bitiş saati başlangıç saatinden sonra olmalıdır."
+  },
+  "nextAutoClick": {
+    "message": "Sonraki otomatik tıklama"
+  },
+  "autoClickTomorrow": {
+    "message": "Yarınki otomatik tıklama"
+  },
+  "scheduling": {
+    "message": "Zamanlanıyor…"
+  },
+  "anyMoment": {
+    "message": "Her an yapılabilir"
+  },
+  "btnClickDefault": {
+    "message": "Filistin için Tıkla Yardım Et"
+  },
+  "btnOpening": {
+    "message": "Kampanya Açılıyor…"
+  },
+  "btnWaiting": {
+    "message": "Onay Bekleniyor"
+  },
+  "btnDone": {
+    "message": "Bugünlük Tamamlandı"
+  },
+  "shortcutHintText": {
+    "message": "bunu her yerden tetikler"
+  },
+  "linkContribute": {
+    "message": "Kodla Katkıda Bulun"
+  },
+  "linkVisualizing": {
+    "message": "Visualizing Palestine"
+  },
+  "linkHistory": {
+    "message": "Filistin Sorununun Tarihi"
+  },
+  "byAuthor": {
+    "message": "geliştiren @jpyxs"
+  },
+  "milestoneStreak": {
+    "message": "$COUNT$ Günlük Seri!",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "notifReminderTitle": {
+    "message": "Filistin için Tıkla Yardım Et"
+  },
+  "notifReminderMessage": {
+    "message": "Bugün henüz tıklamadınız. Serinizi koruyun!"
+  },
+  "notifSuccessTitle": {
+    "message": "Filistin için Tıkla Yardım Et"
+  },
+  "notifSuccessMessage": {
+    "message": "Günlük otomatik tıklama başarılı! Desteğiniz için teşekkürler."
+  }
+}

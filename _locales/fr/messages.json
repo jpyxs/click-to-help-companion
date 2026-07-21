@@ -1,0 +1,162 @@
+{
+  "extName": {
+    "message": "Click to Help Companion"
+  },
+  "extDescription": {
+    "message": "Aide à automatiser et suivre les clics quotidiens confirmés pour la campagne Click-to-Help Palestine d'Arab.org."
+  },
+  "cmdTriggerClick": {
+    "message": "Ouvrir la campagne Click to Help Palestine"
+  },
+  "badgeFreePalestine": {
+    "message": "Palestine Libre"
+  },
+  "dailyStreak": {
+    "message": "Série Quotidienne"
+  },
+  "days": {
+    "message": "jours"
+  },
+  "totalClicks": {
+    "message": "Total des Clics"
+  },
+  "thisWeek": {
+    "message": "Cette Semaine"
+  },
+  "bestStreak": {
+    "message": "Meilleure Série"
+  },
+  "statusPending": {
+    "message": "En attente de la page de remerciement"
+  },
+  "statusCompleted": {
+    "message": "Clic d'aujourd'hui effectué !"
+  },
+  "statusAtRisk": {
+    "message": "Série en danger — reste $TIME$",
+    "placeholders": {
+      "time": {
+        "content": "$1"
+      }
+    }
+  },
+  "settingsTitle": {
+    "message": "Paramètres"
+  },
+  "settingAutoClick": {
+    "message": "Auto-clic Quotidien"
+  },
+  "settingAutoClickDesc": {
+    "message": "Cliquer automatiquement pendant vos heures actives"
+  },
+  "settingNotifications": {
+    "message": "Notifications"
+  },
+  "settingNotificationsDesc": {
+    "message": "Me rappeler si je n'ai pas cliqué"
+  },
+  "settingLanguage": {
+    "message": "Langue"
+  },
+  "settingLanguageDesc": {
+    "message": "Choisir la langue de l'extension"
+  },
+  "langAuto": {
+    "message": "Auto (Navigateur)"
+  },
+  "autoClickTime": {
+    "message": "Heure de l'auto-clic"
+  },
+  "timeMorning": {
+    "message": "Matin (8h–10h)"
+  },
+  "timeMidday": {
+    "message": "Midi (11h–14h)"
+  },
+  "timeAfternoon": {
+    "message": "Après-midi (15h–17h)"
+  },
+  "timeEvening": {
+    "message": "Soir (18h–20h)"
+  },
+  "timeNight": {
+    "message": "Nuit (21h–23h)"
+  },
+  "timeExact": {
+    "message": "Heure précise..."
+  },
+  "timeCustom": {
+    "message": "Plage personnalisée..."
+  },
+  "from": {
+    "message": "De"
+  },
+  "to": {
+    "message": "À"
+  },
+  "at": {
+    "message": "À"
+  },
+  "customTimeHintError": {
+    "message": "L'heure de fin doit être postérieure à l'heure de début."
+  },
+  "nextAutoClick": {
+    "message": "Prochain auto-clic"
+  },
+  "autoClickTomorrow": {
+    "message": "Auto-clic demain"
+  },
+  "scheduling": {
+    "message": "Programmation…"
+  },
+  "anyMoment": {
+    "message": "D'un moment à l'autre"
+  },
+  "btnClickDefault": {
+    "message": "Click to Help Palestine"
+  },
+  "btnOpening": {
+    "message": "Ouverture de la Campagne…"
+  },
+  "btnWaiting": {
+    "message": "En attente de confirmation"
+  },
+  "btnDone": {
+    "message": "Terminé pour aujourd'hui"
+  },
+  "shortcutHintText": {
+    "message": "déclenche ceci depuis n'importe où"
+  },
+  "linkContribute": {
+    "message": "Contribuer au code"
+  },
+  "linkVisualizing": {
+    "message": "Visualizing Palestine"
+  },
+  "linkHistory": {
+    "message": "Histoire de la question de Palestine"
+  },
+  "byAuthor": {
+    "message": "par @jpyxs"
+  },
+  "milestoneStreak": {
+    "message": "Série de $COUNT$ Jours !",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "notifReminderTitle": {
+    "message": "Click to Help Palestine"
+  },
+  "notifReminderMessage": {
+    "message": "Vous n'avez pas cliqué aujourd'hui. Maintenez votre série !"
+  },
+  "notifSuccessTitle": {
+    "message": "Click to Help Palestine"
+  },
+  "notifSuccessMessage": {
+    "message": "Auto-clic quotidien réussi ! Merci pour votre soutien."
+  }
+}

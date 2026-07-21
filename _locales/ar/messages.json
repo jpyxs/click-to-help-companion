@@ -1,0 +1,162 @@
+{
+  "extName": {
+    "message": "مرافق انقر للمساعدة"
+  },
+  "extDescription": {
+    "message": "يساعد في أتمتة وتتبع النقرات اليومية المؤكدة لحملة انقر للمساعدة من أجل فلسطين على موقع Arab.org."
+  },
+  "cmdTriggerClick": {
+    "message": "فتح حملة انقر للمساعدة من أجل فلسطين"
+  },
+  "badgeFreePalestine": {
+    "message": "فلسطين حرة"
+  },
+  "dailyStreak": {
+    "message": "السلسلة اليومية"
+  },
+  "days": {
+    "message": "أيام"
+  },
+  "totalClicks": {
+    "message": "إجمالي النقرات"
+  },
+  "thisWeek": {
+    "message": "هذا الأسبوع"
+  },
+  "bestStreak": {
+    "message": "أفضل سلسلة"
+  },
+  "statusPending": {
+    "message": "معلق حتى صفحة الشكر"
+  },
+  "statusCompleted": {
+    "message": "تمت نقرة اليوم بنجاح!"
+  },
+  "statusAtRisk": {
+    "message": "السلسلة مهددة — متبقي $TIME$",
+    "placeholders": {
+      "time": {
+        "content": "$1"
+      }
+    }
+  },
+  "settingsTitle": {
+    "message": "الإعدادات"
+  },
+  "settingAutoClick": {
+    "message": "النقر التلقائي اليومي"
+  },
+  "settingAutoClickDesc": {
+    "message": "انقر تلقائيًا خلال ساعات نشاطك"
+  },
+  "settingNotifications": {
+    "message": "التنبيهات"
+  },
+  "settingNotificationsDesc": {
+    "message": "ذكرني إذا لم أنقر اليوم"
+  },
+  "settingLanguage": {
+    "message": "اللغة"
+  },
+  "settingLanguageDesc": {
+    "message": "اختر لغة عرض إضافة المتصفح"
+  },
+  "langAuto": {
+    "message": "تلقائي (حسب المتصفح)"
+  },
+  "autoClickTime": {
+    "message": "وقت النقر التلقائي"
+  },
+  "timeMorning": {
+    "message": "الصباح (8–10 صباحًا)"
+  },
+  "timeMidday": {
+    "message": "الظهيرة (11 صباحًا–2 ظهرًا)"
+  },
+  "timeAfternoon": {
+    "message": "بعد الظهر (3–5 مساءً)"
+  },
+  "timeEvening": {
+    "message": "المساء (6–8 مساءً)"
+  },
+  "timeNight": {
+    "message": "الليل (9–11 مساءً)"
+  },
+  "timeExact": {
+    "message": "وقت محدد..."
+  },
+  "timeCustom": {
+    "message": "نطاق مخصص..."
+  },
+  "from": {
+    "message": "من"
+  },
+  "to": {
+    "message": "إلى"
+  },
+  "at": {
+    "message": "في"
+  },
+  "customTimeHintError": {
+    "message": "يجب أن يكون وقت الانتهاء بعد وقت البدء."
+  },
+  "nextAutoClick": {
+    "message": "النقر التلقائي القادم"
+  },
+  "autoClickTomorrow": {
+    "message": "النقر التلقائي غدًا"
+  },
+  "scheduling": {
+    "message": "جاري الجدولة…"
+  },
+  "anyMoment": {
+    "message": "في أي لحظة"
+  },
+  "btnClickDefault": {
+    "message": "انقر للمساعدة من أجل فلسطين"
+  },
+  "btnOpening": {
+    "message": "جاري فتح الحملة…"
+  },
+  "btnWaiting": {
+    "message": "في انتظار التأكيد"
+  },
+  "btnDone": {
+    "message": "تم بنجاح اليوم"
+  },
+  "shortcutHintText": {
+    "message": "يفعل هذا الاختصار من أي مكان"
+  },
+  "linkContribute": {
+    "message": "المساهمة في البرمجة"
+  },
+  "linkVisualizing": {
+    "message": "فلسطين بالرسوم البيانية"
+  },
+  "linkHistory": {
+    "message": "تاريخ قضية فلسطين"
+  },
+  "byAuthor": {
+    "message": "بواسطة @jpyxs"
+  },
+  "milestoneStreak": {
+    "message": "سلسلة $COUNT$ يومًا!",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "notifReminderTitle": {
+    "message": "انقر للمساعدة من أجل فلسطين"
+  },
+  "notifReminderMessage": {
+    "message": "لم تنقر اليوم بعد. حافظ على سلسلتك مستمرة!"
+  },
+  "notifSuccessTitle": {
+    "message": "انقر للمساعدة من أجل فلسطين"
+  },
+  "notifSuccessMessage": {
+    "message": "نجح النقر التلقائي اليومي! شكرًا لدعمك."
+  }
+}

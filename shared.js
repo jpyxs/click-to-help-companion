@@ -11,6 +11,7 @@ export const STORAGE_KEYS = {
   CUSTOM_TIME_END: "customTimeEnd",
   CUSTOM_TIME_START: "customTimeStart",
   EXACT_TIME: "exactTime",
+  LANGUAGE: "language",
   LAST_CLICK_DATE: "lastClickDate",
   LAST_REMINDER_DATE: "lastReminderDate",
   LAST_REMINDER_TIME: "lastReminderTime",
@@ -39,4 +40,73 @@ export function getWeekStartDate(dateStr) {
   const diff = (dow === 0 ? -6 : 1) - dow;
   d.setDate(d.getDate() + diff);
   return d.toLocaleDateString("en-CA");
+}
+
+const localeCache = {};
+
+/**
+ * Resolves a localized string key based on stored language preference or browser locale.
+ * @param {string} key - The message key in messages.json
+ * @param {string} langPreference - Stored language preference ("auto", "en", "ar", etc.)
+ * @param {Array|string} substitutions - Optional placeholder substitution string(s)
+ * @returns {Promise<string>}
+ */
+export async function getI18nMessage(key, langPreference = "auto", substitutions = []) {
+  let lang = langPreference;
+  if (!lang || lang === "auto") {
+    if (typeof chrome !== "undefined" && chrome.i18n && chrome.i18n.getUILanguage) {
+      lang = chrome.i18n.getUILanguage().split("-")[0];
+    } else {
+      lang = "en";
+    }
+  }
+
+  if (!localeCache[lang]) {
+    try {
+      const url = typeof chrome !== "undefined" && chrome.runtime
+        ? chrome.runtime.getURL(`_locales/${lang}/messages.json`)
+        : `_locales/${lang}/messages.json`;
+      const res = await fetch(url);
+      if (res.ok) {
+        localeCache[lang] = await res.json();
+      }
+    } catch {
+      // Fallback below
+    }
+  }
+
+  if (!localeCache[lang] && lang !== "en") {
+    try {
+      const url = typeof chrome !== "undefined" && chrome.runtime
+        ? chrome.runtime.getURL(`_locales/en/messages.json`)
+        : `_locales/en/messages.json`;
+      const res = await fetch(url);
+      if (res.ok) {
+        localeCache["en"] = await res.json();
+      }
+    } catch {
+      // Fallback below
+    }
+  }
+
+  const messages = localeCache[lang] || localeCache["en"] || {};
+  const entry = messages[key];
+
+  if (!entry) {
+    if (typeof chrome !== "undefined" && chrome.i18n && chrome.i18n.getMessage) {
+      const chromeMsg = chrome.i18n.getMessage(key, substitutions);
+      if (chromeMsg) return chromeMsg;
+    }
+    return key;
+  }
+
+  let text = entry.message || "";
+  const subArray = Array.isArray(substitutions) ? substitutions : [substitutions];
+  if (entry.placeholders) {
+    Object.keys(entry.placeholders).forEach((phKey, idx) => {
+      const val = subArray[idx] !== undefined ? subArray[idx] : "";
+      text = text.replace(new RegExp(`\\$${phKey.toUpperCase()}\\$`, "g"), val);
+    });
+  }
+  return text;
 }

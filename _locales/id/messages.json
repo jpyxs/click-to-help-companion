@@ -1,0 +1,162 @@
+{
+  "extName": {
+    "message": "Click to Help Companion"
+  },
+  "extDescription": {
+    "message": "Membantu mengotomatiskan dan melacak klik harian terkonfirmasi untuk kampanye Click-to-Help Palestina di Arab.org."
+  },
+  "cmdTriggerClick": {
+    "message": "Buka kampanye Click to Help Palestina"
+  },
+  "badgeFreePalestine": {
+    "message": "Palestine Libre"
+  },
+  "dailyStreak": {
+    "message": "Rentetan Harian"
+  },
+  "days": {
+    "message": "hari"
+  },
+  "totalClicks": {
+    "message": "Total Klik"
+  },
+  "thisWeek": {
+    "message": "Minggu Ini"
+  },
+  "bestStreak": {
+    "message": "Rentetan Terbaik"
+  },
+  "statusPending": {
+    "message": "Menunggu hingga halaman terima kasih"
+  },
+  "statusCompleted": {
+    "message": "Klik hari ini selesai!"
+  },
+  "statusAtRisk": {
+    "message": "Rentetan terancam — tersisa $TIME$",
+    "placeholders": {
+      "time": {
+        "content": "$1"
+      }
+    }
+  },
+  "settingsTitle": {
+    "message": "Pengaturan"
+  },
+  "settingAutoClick": {
+    "message": "Klik Otomatis Harian"
+  },
+  "settingAutoClickDesc": {
+    "message": "Klik otomatis selama jam aktif Anda"
+  },
+  "settingNotifications": {
+    "message": "Notifikasi"
+  },
+  "settingNotificationsDesc": {
+    "message": "Ingatkan saya jika belum mengeklik"
+  },
+  "settingLanguage": {
+    "message": "Bahasa"
+  },
+  "settingLanguageDesc": {
+    "message": "Pilih bahasa tampilan ekstensi"
+  },
+  "langAuto": {
+    "message": "Otomatis (Browser)"
+  },
+  "autoClickTime": {
+    "message": "Waktu klik otomatis"
+  },
+  "timeMorning": {
+    "message": "Pagi (08.00–10.00)"
+  },
+  "timeMidday": {
+    "message": "Siang (11.00–14.00)"
+  },
+  "timeAfternoon": {
+    "message": "Sore (15.00–17.00)"
+  },
+  "timeEvening": {
+    "message": "Malam (18.00–20.00)"
+  },
+  "timeNight": {
+    "message": "Malam Larut (21.00–23.00)"
+  },
+  "timeExact": {
+    "message": "Waktu tepat..."
+  },
+  "timeCustom": {
+    "message": "Rentang kustom..."
+  },
+  "from": {
+    "message": "Dari"
+  },
+  "to": {
+    "message": "Sampai"
+  },
+  "at": {
+    "message": "Pada"
+  },
+  "customTimeHintError": {
+    "message": "Waktu selesai harus setelah waktu mulai."
+  },
+  "nextAutoClick": {
+    "message": "Klik otomatis berikutnya"
+  },
+  "autoClickTomorrow": {
+    "message": "Klik otomatis besok"
+  },
+  "scheduling": {
+    "message": "Jadwal…"
+  },
+  "anyMoment": {
+    "message": "Bisa terjadi kapan saja"
+  },
+  "btnClickDefault": {
+    "message": "Click to Help Palestina"
+  },
+  "btnOpening": {
+    "message": "Membuka Kampanye…"
+  },
+  "btnWaiting": {
+    "message": "Menunggu Konfirmasi"
+  },
+  "btnDone": {
+    "message": "Selesai untuk Hari Ini"
+  },
+  "shortcutHintText": {
+    "message": "memicu ini dari mana saja"
+  },
+  "linkContribute": {
+    "message": "Kontribusi Kode"
+  },
+  "linkVisualizing": {
+    "message": "Visualizing Palestine"
+  },
+  "linkHistory": {
+    "message": "Sejarah Masalah Palestina"
+  },
+  "byAuthor": {
+    "message": "oleh @jpyxs"
+  },
+  "milestoneStreak": {
+    "message": "Rentetan $COUNT$ Hari!",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "notifReminderTitle": {
+    "message": "Click to Help Palestina"
+  },
+  "notifReminderMessage": {
+    "message": "Anda belum mengeklik hari ini. Pertahankan rentetan Anda!"
+  },
+  "notifSuccessTitle": {
+    "message": "Click to Help Palestina"
+  },
+  "notifSuccessMessage": {
+    "message": "Klik otomatis harian berhasil! Terima kasih atas dukungan Anda."
+  }
+}

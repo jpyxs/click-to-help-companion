@@ -1147,3 +1147,75 @@ body {
     opacity: 0;
   }
 }
+
+/* --- Right-to-Left (RTL) Layout Override Rules --- */
+
+[dir="rtl"] {
+  text-align: right;
+}
+
+[dir="rtl"] .header {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .header-left {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .palestinian-flag {
+  transform: scaleX(-1); /* Mirror the flag layout so triangle points inward */
+}
+
+[dir="rtl"] .time-range-select,
+[dir="rtl"] .language-select {
+  padding: 6px 10px 6px 30px;
+  background-position: left 8px center;
+}
+
+[dir="rtl"] .toggle input:checked+.toggle-slider::before {
+  transform: translateX(-16px);
+}
+
+[dir="rtl"] .countdown-row {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .countdown-label {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .footer-link {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .footer-link:hover {
+  transform: translateX(-2px);
+}
+
+[dir="rtl"] .footer-flag-stripe {
+  background: linear-gradient(to left,
+      var(--flag-red) 0% 25%,
+      var(--flag-green) 25% 50%,
+      var(--flag-white) 50% 75%,
+      var(--flag-black) 75% 100%);
+}
+
+[dir="rtl"] .footer-meta {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .setting-row {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .setting-info {
+  text-align: right;
+}
+
+[dir="rtl"] .custom-time-row {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .shortcut-hint {
+  flex-direction: row-reverse;
+}
