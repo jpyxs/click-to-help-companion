@@ -3,7 +3,7 @@
   "minimum_chrome_version": "91",
   "default_locale": "en",
   "name": "__MSG_extName__",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "__MSG_extDescription__",
   "permissions": [
     "storage",

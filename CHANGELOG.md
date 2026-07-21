@@ -7,7 +7,24 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+- Internationalization (i18n) support for 7 languages: English (`en`), Arabic (`ar`), Spanish (`es`), French (`fr`), German (`de`), Turkish (`tr`), and Indonesian (`id`)
+- Automatic browser language detection with manual language selector dropdown in Popup settings
+- Right-to-Left (RTL) layout switching for Arabic (`ar`) with mirrored components, controls, and flag animations
+- Hard-coded fallback dictionary (`FALLBACK_MESSAGES`) in `shared.js` to ensure reliable string resolution even if locale files are missing or offline
+- Quota-safe storage wrappers (`safeStorageSet` / `saveStorage`) with automatic fallback to `chrome.storage.local` if `chrome.storage.sync` quota limits are exceeded
+- Expressed `"minimum_chrome_version": "91"` requirement in `manifest.json` for Manifest V3 ES Module service worker support
 
+### Fixed & Improved
+- Content Script `isVisible()` function now correctly recognizes `position: fixed` elements overlaying the Arab.org click button
+- Prevented silent storage failures by handling `chrome.runtime.lastError` across all storage operations
+- Eliminated 1-frame button label flicker on language change by excluding `#btn-click` from static translation loops
+- Refactored `_atRiskInterval` timer callback in `popup.js` to eliminate unhandled/dropped promises
+- Added `unload` event listener in `popup.js` to clean up all active intervals and timers on popup close
+- Wrapped all `chrome.alarms.create` calls in `try/catch` blocks across `background.js` to prevent unhandled background worker exceptions
+- Enforced a 1-minute minimum delay (`Math.max(delayMinutes, 1)`) on reminder alarms to prevent zero-delay alarm creation loops
+- Consolidated duplicate storage updates in `recordClick()` into a single atomic write
+- Added content script re-injection guard (`window.__clickToHelpInjected`) and path-change reset handlers to prevent duplicate script execution on single-page navigation
 
 ---
 
