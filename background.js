@@ -15,27 +15,73 @@ const REMINDER_START_HOUR_NO_AUTOCLICK = 18;   // 6 PM when auto-click is OFF
 /* --- Promise Wrappers --- */
 
 function storageGet(keys) {
-  return new Promise((resolve) => chrome.storage.sync.get(keys, resolve));
+  return new Promise((resolve) => {
+    chrome.storage.sync.get(keys, (result) => {
+      if (chrome.runtime.lastError) {
+        console.error("storageGet error:", chrome.runtime.lastError.message);
+        resolve({});
+      } else {
+        resolve(result || {});
+      }
+    });
+  });
 }
 
 function storageSet(data) {
-  return new Promise((resolve) => chrome.storage.sync.set(data, resolve));
+  return new Promise((resolve) => {
+    chrome.storage.sync.set(data, () => {
+      if (chrome.runtime.lastError) {
+        console.error("storageSet error (quota/storage failure):", chrome.runtime.lastError.message);
+      }
+      resolve();
+    });
+  });
 }
 
 function storageRemove(keys) {
-  return new Promise((resolve) => chrome.storage.sync.remove(keys, resolve));
+  return new Promise((resolve) => {
+    chrome.storage.sync.remove(keys, () => {
+      if (chrome.runtime.lastError) {
+        console.error("storageRemove error:", chrome.runtime.lastError.message);
+      }
+      resolve();
+    });
+  });
 }
 
 function alarmsClear(name) {
-  return new Promise((resolve) => chrome.alarms.clear(name, resolve));
+  return new Promise((resolve) => {
+    chrome.alarms.clear(name, () => {
+      if (chrome.runtime.lastError) {
+        // Ignore alarm clear error
+      }
+      resolve();
+    });
+  });
 }
 
 function tabsCreate(props) {
-  return new Promise((resolve) => chrome.tabs.create(props, resolve));
+  return new Promise((resolve) => {
+    chrome.tabs.create(props, (tab) => {
+      if (chrome.runtime.lastError) {
+        console.error("tabsCreate error:", chrome.runtime.lastError.message);
+        resolve(null);
+      } else {
+        resolve(tab);
+      }
+    });
+  });
 }
 
 function tabsRemove(tabId) {
-  return new Promise((resolve) => chrome.tabs.remove(tabId, resolve));
+  return new Promise((resolve) => {
+    chrome.tabs.remove(tabId, () => {
+      if (chrome.runtime.lastError) {
+        // Tab may already be closed — ignore error
+      }
+      resolve();
+    });
+  });
 }
 
 /* --- Lifecycle Events --- */

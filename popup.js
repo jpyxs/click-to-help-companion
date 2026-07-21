@@ -338,15 +338,20 @@ function updateCountdown() {
 
   dom.countdownRow.classList.toggle("visible", show);
 
-  if (_countdownInterval) {
-    clearInterval(_countdownInterval);
-    _countdownInterval = null;
+  if (!show || typeof chrome === "undefined" || !chrome.alarms) {
+    if (_countdownInterval) {
+      clearInterval(_countdownInterval);
+      _countdownInterval = null;
+    }
+    return;
   }
-
-  if (!show || typeof chrome === "undefined" || !chrome.alarms) return;
 
   chrome.alarms.get(ALARM_AUTO_CLICK, (alarm) => {
     if (chrome.runtime.lastError || !alarm) {
+      if (_countdownInterval) {
+        clearInterval(_countdownInterval);
+        _countdownInterval = null;
+      }
       dom.countdownText.textContent = "Scheduling\u2026";
       return;
     }
@@ -375,6 +380,9 @@ function updateCountdown() {
     }
 
     tick();
+    if (_countdownInterval) {
+      clearInterval(_countdownInterval);
+    }
     _countdownInterval = setInterval(tick, 1000);
   });
 }

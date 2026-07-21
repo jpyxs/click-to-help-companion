@@ -60,12 +60,14 @@
 
   function isVisible(element) {
     const style = window.getComputedStyle(element);
-    return (
-      style.display !== "none" &&
-      style.visibility !== "hidden" &&
-      style.opacity !== "0" &&
-      element.offsetParent !== null
-    );
+    if (style.display === "none" || style.visibility === "hidden" || style.opacity === "0") {
+      return false;
+    }
+    const rect = element.getBoundingClientRect();
+    if (rect.width === 0 && rect.height === 0) {
+      return false;
+    }
+    return element.offsetParent !== null || style.position === "fixed";
   }
 
   function isDisabled(element) {
@@ -172,13 +174,12 @@
    * Called on initial page load AND after any SPA navigation.
    */
   function checkCurrentPath() {
+    stopWatching();
     if (window.location.pathname.startsWith(THANK_YOU_PATH)) {
       notifyClickConfirmed();
     } else if (window.location.pathname.startsWith(CAMPAIGN_PATH)) {
-      // Only start the retry loop if it hasn't already run on this document.
-      if (attemptCount === 0 && !_observer) {
-        attemptClick();
-      }
+      attemptCount = 0;
+      attemptClick();
     }
   }
 
