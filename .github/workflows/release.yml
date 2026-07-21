@@ -36,7 +36,23 @@ jobs:
         id: changelog
         run: |
           VERSION="${{ steps.version.outputs.version }}"
-          BODY=$(awk "/^## \[$VERSION\]/{found=1; next} /^## \[/{if(found) exit} found" CHANGELOG.md)
+          BODY=$(node -e "
+            const fs = require('fs');
+            const content = fs.readFileSync('CHANGELOG.md', 'utf8');
+            const version = process.argv[1];
+            const lines = content.split('\n');
+            let found = false;
+            let result = [];
+            for (const line of lines) {
+              if (line.startsWith('## [' + version + ']')) {
+                found = true;
+                continue;
+              }
+              if (found && line.startsWith('## [')) break;
+              if (found) result.push(line);
+            }
+            console.log(result.join('\n').trim());
+          " "$VERSION")
           {
             echo "body<<EOF"
             echo "$BODY"
