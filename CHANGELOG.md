@@ -14,6 +14,12 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+
+
+---
+
+## [1.5.0] - 2026-07-21
+
 ### Added
 - Internationalization (i18n) support for 7 languages: English (`en`), Arabic (`ar`), Spanish (`es`), French (`fr`), German (`de`), Turkish (`tr`), and Indonesian (`id`)
 - Automatic browser language detection with manual language selector dropdown in Popup settings
