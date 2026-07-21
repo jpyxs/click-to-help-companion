@@ -612,37 +612,55 @@ chrome.notifications.onClicked.addListener((notificationId) => {
 /* --- Message Handling --- */
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  // Use if-else so the channel is not kept open for unrecognised messages.
+  // All branches call sendResponse synchronously, so return true is not needed.
   if (message.type === "CLICK_CONFIRMED") {
     recordClick(sender.tab?.id);
     sendResponse({ status: "ok" });
-  }
-
-  if (message.type === "AUTO_CLICK_CHANGED") {
+  } else if (message.type === "AUTO_CLICK_CHANGED") {
     setupAutoClickAlarm();
     sendResponse({ status: "ok" });
-  }
-
-  if (message.type === "NOTIFICATIONS_CHANGED") {
+  } else if (message.type === "NOTIFICATIONS_CHANGED") {
     setupReminderAlarm();
     sendResponse({ status: "ok" });
-  }
-
-  if (message.type === "SETTINGS_CHANGED") {
+  } else if (message.type === "SETTINGS_CHANGED") {
     setupAlarms();
     sendResponse({ status: "ok" });
   }
-
-  return true;
 });
 
 chrome.tabs.onRemoved.addListener(async (tabId) => {
-  const data = await storageGet(PENDING_AUTO_CLICK_TAB);
+  const data = await storageGet([
+    PENDING_AUTO_CLICK_TAB,
+    STORAGE_KEYS.AUTO_CLICK,
+    STORAGE_KEYS.TIME_RANGE,
+    STORAGE_KEYS.CUSTOM_TIME_START,
+    STORAGE_KEYS.CUSTOM_TIME_END,
+    STORAGE_KEYS.TODAY_CLICKS,
+    STORAGE_KEYS.TODAY_DATE
+  ]);
   const pendingTab = data[PENDING_AUTO_CLICK_TAB];
   const pendingTabId = getPendingAutoClickTabId(pendingTab);
 
   if (pendingTabId === tabId || isExpiredPendingTab(pendingTab)) {
     await storageRemove(PENDING_AUTO_CLICK_TAB);
     await alarmsClear(ALARM_AUTO_CLICK_CLEANUP);
+
+    // Re-arm the auto-click alarm so the next attempt is not silently lost.
+    // Mirrors the rescheduling logic in cleanupPendingAutoClickTab().
+    if (data[STORAGE_KEYS.AUTO_CLICK]) {
+      const today = getTodayString();
+      if (!hasClickedToday(data, today)) {
+        const timeRange = data[STORAGE_KEYS.TIME_RANGE] || "morning";
+        const customTimes = getCustomTimes(data);
+        const currentWindow = getTimeRangeWindow(timeRange, new Date(), customTimes);
+        if (new Date() <= currentWindow.end) {
+          chrome.alarms.create(ALARM_AUTO_CLICK, { delayInMinutes: 15 });
+        } else {
+          scheduleAutoClickAlarm(timeRange, true, customTimes);
+        }
+      }
+    }
   }
 });
 
@@ -699,7 +717,7 @@ async function recordClick(tabId) {
   if (isAutoClick) {
     chrome.notifications.create({
       type: "basic",
-      iconUrl: "icons/icon128.png",
+      iconUrl: "icons/icon-128.png",
       title: "Click to Help Palestine",
       message: "Daily auto-click successful! Thank you for your support.",
       priority: 0

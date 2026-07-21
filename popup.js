@@ -135,7 +135,11 @@ function reconcileDate() {
   }
 
   const currentWeekStart = getWeekStartDate(today);
-  if (state.weekStartDate && state.weekStartDate !== currentWeekStart) {
+  if (!state.weekStartDate) {
+    // First run — initialise week tracking without touching weekClicks (already 0).
+    state.weekStartDate = currentWeekStart;
+    changed = true;
+  } else if (state.weekStartDate !== currentWeekStart) {
     state.weekClicks = 0;
     state.weekStartDate = currentWeekStart;
     changed = true;

@@ -161,12 +161,45 @@ function randomDelay(min, max) {
 
 const CAMPAIGN_PATH = "/click-to-help/palestine/";
 
-if (window.location.pathname.startsWith(THANK_YOU_PATH)) {
-  notifyClickConfirmed();
-} else if (window.location.pathname.startsWith(CAMPAIGN_PATH)) {
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", attemptClick);
-  } else {
-    attemptClick();
+/**
+ * Checks the current URL path and acts accordingly.
+ * Called on initial page load AND after any SPA navigation.
+ */
+function checkCurrentPath() {
+  if (window.location.pathname.startsWith(THANK_YOU_PATH)) {
+    notifyClickConfirmed();
+  } else if (window.location.pathname.startsWith(CAMPAIGN_PATH)) {
+    // Only start the retry loop if it hasn't already run on this document.
+    if (attemptCount === 0 && !_observer) {
+      attemptClick();
+    }
   }
+}
+
+/* --- SPA Navigation Detection --- */
+
+// Arab.org may navigate to the thank-you path via pushState/replaceState
+// rather than a full page load. In that case document_idle never fires again,
+// so we intercept the History API to catch those navigations.
+
+const _origPushState = history.pushState.bind(history);
+history.pushState = function (...args) {
+  _origPushState(...args);
+  checkCurrentPath();
+};
+
+const _origReplaceState = history.replaceState.bind(history);
+history.replaceState = function (...args) {
+  _origReplaceState(...args);
+  checkCurrentPath();
+};
+
+window.addEventListener("popstate", checkCurrentPath);
+
+/* --- Initial Page Load --- */
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", checkCurrentPath);
+} else {
+  checkCurrentPath();
 }

@@ -31,9 +31,12 @@ export function getTodayString() {
 
 /** Returns the ISO week start (Monday) as "YYYY-MM-DD" for a given "YYYY-MM-DD" date string. */
 export function getWeekStartDate(dateStr) {
-  const d = new Date(dateStr);
-  const day = d.getDay();
-  const diff = (day === 0 ? -6 : 1) - day;
+  // Parse as local date parts — new Date("YYYY-MM-DD") is UTC midnight and
+  // shifts the date by up to a full day in timezones behind UTC.
+  const [year, month, day] = dateStr.split("-").map(Number);
+  const d = new Date(year, month - 1, day); // local midnight
+  const dow = d.getDay();
+  const diff = (dow === 0 ? -6 : 1) - dow;
   d.setDate(d.getDate() + diff);
   return d.toLocaleDateString("en-CA");
 }
