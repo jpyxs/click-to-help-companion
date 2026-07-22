@@ -1,0 +1,162 @@
+{
+  "extName": {
+    "message": "Click to Help Companion"
+  },
+  "extDescription": {
+    "message": "Makatulong sa pag-automate at pag-track ng mga nakumpirmang araw-araw na click para sa kampanyang Click-to-Help Palestine ng Arab.org."
+  },
+  "cmdTriggerClick": {
+    "message": "Buksan ang kampanyang Click to Help Palestine"
+  },
+  "badgeFreePalestine": {
+    "message": "Malayang Palestina"
+  },
+  "dailyStreak": {
+    "message": "Araw-araw na Streak"
+  },
+  "days": {
+    "message": "mga araw"
+  },
+  "totalClicks": {
+    "message": "Kabuuan ng mga Click"
+  },
+  "thisWeek": {
+    "message": "Ngayong Linggo"
+  },
+  "bestStreak": {
+    "message": "Pinakamahusay na Streak"
+  },
+  "statusPending": {
+    "message": "Nakabinbin hanggang sa pahina ng pasasalamat"
+  },
+  "statusCompleted": {
+    "message": "Kumpleto na ang click ngayong araw!"
+  },
+  "statusAtRisk": {
+    "message": "Panganib ang streak — $TIME$",
+    "placeholders": {
+      "time": {
+        "content": "$1"
+      }
+    }
+  },
+  "settingsTitle": {
+    "message": "Mga Setting"
+  },
+  "settingAutoClick": {
+    "message": "Araw-araw na Auto-Click"
+  },
+  "settingAutoClickDesc": {
+    "message": "Awtomatikong mag-click sa loob ng iyong aktibong oras"
+  },
+  "settingNotifications": {
+    "message": "Mga Notification"
+  },
+  "settingNotificationsDesc": {
+    "message": "Paalalahanin ako kapag hindi pa ako nakakapag-click"
+  },
+  "settingLanguage": {
+    "message": "Wika"
+  },
+  "settingLanguageDesc": {
+    "message": "Pumili ng wika ng extension"
+  },
+  "langAuto": {
+    "message": "Auto (Browser)"
+  },
+  "autoClickTime": {
+    "message": "Oras ng auto-click"
+  },
+  "timeMorning": {
+    "message": "Umaga (8–10 AM)"
+  },
+  "timeMidday": {
+    "message": "Tanghali (11 AM–2 PM)"
+  },
+  "timeAfternoon": {
+    "message": "Hapon (3–5 PM)"
+  },
+  "timeEvening": {
+    "message": "Gabi (6–8 PM)"
+  },
+  "timeNight": {
+    "message": "Gabi (9–11 PM)"
+  },
+  "timeExact": {
+    "message": "Tiyak na oras..."
+  },
+  "timeCustom": {
+    "message": "Kustom na saklaw..."
+  },
+  "from": {
+    "message": "Mula"
+  },
+  "to": {
+    "message": "Hanggang"
+  },
+  "at": {
+    "message": "Sa oras na"
+  },
+  "customTimeHintError": {
+    "message": "Ang oras ng pagtatapos ay dapat kasunod ng oras ng pagsisimula."
+  },
+  "nextAutoClick": {
+    "message": "Susunod na auto-click"
+  },
+  "autoClickTomorrow": {
+    "message": "Auto-click bukas"
+  },
+  "scheduling": {
+    "message": "Isinasaayos ang iskedyul…"
+  },
+  "anyMoment": {
+    "message": "Anumang sandali mula ngayon"
+  },
+  "btnClickDefault": {
+    "message": "Mag-click para Tumulong sa Palestina"
+  },
+  "btnOpening": {
+    "message": "Binubuksan ang Kampanya…"
+  },
+  "btnWaiting": {
+    "message": "Naghihintay ng Kumpirmasyon"
+  },
+  "btnDone": {
+    "message": "Tapos na para sa Araw na Ito"
+  },
+  "shortcutHintText": {
+    "message": "nagtataguyod nito kahit saan"
+  },
+  "linkContribute": {
+    "message": "Mag-ambag ng Code"
+  },
+  "linkVisualizing": {
+    "message": "Visualizing Palestine"
+  },
+  "linkHistory": {
+    "message": "Kasaysayan ng Isyu ng Palestina"
+  },
+  "byAuthor": {
+    "message": "ni @jpyxs"
+  },
+  "milestoneStreak": {
+    "message": "$COUNT$-Araw na Streak!",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "notifReminderTitle": {
+    "message": "Click to Help Palestine"
+  },
+  "notifReminderMessage": {
+    "message": "Hindi ka pa nakakapag-click ngayong araw. Panatilihing buhay ang iyong streak!"
+  },
+  "notifSuccessTitle": {
+    "message": "Click to Help Palestine"
+  },
+  "notifSuccessMessage": {
+    "message": "Matagumpay ang araw-araw na auto-click! Maraming salamat sa iyong suporta."
+  }
+}

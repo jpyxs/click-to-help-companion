@@ -83,6 +83,8 @@ export async function getI18nMessage(key, langPreference = "auto", substitutions
     }
   }
 
+  if (lang === "tl") lang = "fil";
+
   if (!localeCache[lang]) {
     try {
       const url = typeof chrome !== "undefined" && chrome.runtime
